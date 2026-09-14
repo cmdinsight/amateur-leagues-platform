@@ -46,4 +46,5 @@ next-env.d.ts
 # sqlite dev database (regenerate with prisma migrate + seed)
 *.db
 *.db-journal
+!prisma/seed-data.db
 
