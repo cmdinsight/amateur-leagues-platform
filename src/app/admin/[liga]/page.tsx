@@ -1,13 +1,22 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getLeagueBySlug } from "@/lib/leagues";
-import { prisma } from "@/lib/prisma";
+import { getLeagueBySlug, getDivisions } from "@/lib/leagues";
 import {
   isAdminAuthed,
   loginAction,
   logoutAction,
   updateBrandingAction,
-  submitResultAction,
+  createDivisionAction,
+  createTournamentAction,
 } from "./actions";
+
+export const dynamic = "force-dynamic";
+
+const FORMAT_LABEL: Record<string, string> = {
+  LIGA: "Liga (todos contra todos)",
+  GRUPOS: "Fase de grupos",
+  ELIMINACION: "Eliminación directa",
+};
 
 export default async function AdminLeaguePage({
   params,
@@ -29,17 +38,9 @@ export default async function AdminLeaguePage({
       <div className="mx-auto mt-16 max-w-sm px-4">
         <h1 className="text-xl font-bold text-slate-900">Acceso admin — {league.name}</h1>
         <form action={login} className="mt-4 space-y-3">
-          <input
-            name="password"
-            type="password"
-            placeholder="Contraseña"
-            className="w-full rounded-lg border border-slate-300 px-3 py-2"
-            required
-          />
+          <input name="password" type="password" placeholder="Contraseña" className="input w-full" required />
           {error && <p className="text-sm text-red-600">Contraseña incorrecta.</p>}
-          <button className="w-full rounded-lg bg-slate-900 py-2 font-semibold text-white">
-            Entrar
-          </button>
+          <button className="w-full rounded-lg bg-slate-900 py-2 font-semibold text-white">Entrar</button>
           <p className="text-xs text-slate-400">
             Demo: la contraseña por defecto de cada liga sembrada es <code>demo1234</code>.
           </p>
@@ -48,17 +49,10 @@ export default async function AdminLeaguePage({
     );
   }
 
-  const scheduled = await prisma.match.findMany({
-    where: { season: { leagueId: league.id }, status: "SCHEDULED" },
-    include: {
-      homeTeam: { include: { rosterSpots: { include: { player: true } } } },
-      awayTeam: { include: { rosterSpots: { include: { player: true } } } },
-    },
-    orderBy: { matchDate: "asc" },
-  });
-
+  const divisions = await getDivisions(league.id);
   const updateBranding = updateBrandingAction.bind(null, liga);
   const logout = logoutAction.bind(null, liga);
+  const createDivision = createDivisionAction.bind(null, liga, league.id);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 space-y-10">
@@ -73,13 +67,13 @@ export default async function AdminLeaguePage({
         <h2 className="mb-4 font-semibold text-slate-800">Marca de la liga</h2>
         <form action={updateBranding} className="grid gap-4 sm:grid-cols-2">
           <Field label="Nombre de la liga">
-            <input name="name" defaultValue={league.name} className="input" />
+            <input name="name" defaultValue={league.name} className="input w-full" />
           </Field>
           <Field label="Ciudad">
-            <input name="city" defaultValue={league.city ?? ""} className="input" />
+            <input name="city" defaultValue={league.city ?? ""} className="input w-full" />
           </Field>
           <Field label="URL del logo">
-            <input name="logoUrl" defaultValue={league.logoUrl ?? ""} className="input" placeholder="https://..." />
+            <input name="logoUrl" defaultValue={league.logoUrl ?? ""} className="input w-full" placeholder="https://..." />
           </Field>
           <div className="flex gap-4">
             <Field label="Color primario">
@@ -97,70 +91,61 @@ export default async function AdminLeaguePage({
         </form>
       </section>
 
-      <section>
-        <h2 className="mb-3 font-semibold text-slate-800">Capturar resultados</h2>
-        {scheduled.length === 0 ? (
-          <p className="text-sm text-slate-500">No hay partidos pendientes por capturar.</p>
-        ) : (
-          <div className="space-y-4">
-            {scheduled.map((m) => {
-              const submit = submitResultAction.bind(null, liga, m.id);
-              return (
-                <form key={m.id} action={submit} className="rounded-xl border border-slate-200 p-4">
-                  <div className="mb-3 flex items-center justify-center gap-3 font-medium text-slate-800">
-                    <span className="flex-1 text-right">{m.homeTeam.name}</span>
-                    <input name="homeScore" type="number" min={0} defaultValue={0} className="input w-16 text-center" />
-                    <span>–</span>
-                    <input name="awayScore" type="number" min={0} defaultValue={0} className="input w-16 text-center" />
-                    <span className="flex-1">{m.awayTeam.name}</span>
-                  </div>
-                  <div className="grid gap-4 sm:grid-cols-2 text-sm">
-                    <div>
-                      <p className="mb-1 text-xs font-semibold uppercase text-slate-400">
-                        Goles — {m.homeTeam.name}
-                      </p>
-                      {m.homeTeam.rosterSpots.map((rs) => (
-                        <div key={rs.id} className="flex items-center justify-between py-0.5">
-                          <span>{rs.player.fullName}</span>
-                          <input
-                            type="number"
-                            min={0}
-                            defaultValue={0}
-                            name={`homeGoals_${rs.playerId}`}
-                            className="input w-14 text-center"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                    <div>
-                      <p className="mb-1 text-xs font-semibold uppercase text-slate-400">
-                        Goles — {m.awayTeam.name}
-                      </p>
-                      {m.awayTeam.rosterSpots.map((rs) => (
-                        <div key={rs.id} className="flex items-center justify-between py-0.5">
-                          <span>{rs.player.fullName}</span>
-                          <input
-                            type="number"
-                            min={0}
-                            defaultValue={0}
-                            name={`awayGoals_${rs.playerId}`}
-                            className="input w-14 text-center"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <button
-                    className="mt-4 rounded-lg px-4 py-2 text-sm font-semibold text-white"
-                    style={{ background: league.primaryColor }}
+      <section className="space-y-4">
+        <h2 className="font-semibold text-slate-800">Divisiones y torneos</h2>
+
+        {divisions.map((division) => {
+          const createTournament = createTournamentAction.bind(null, liga, division.id);
+          return (
+            <div key={division.id} className="rounded-xl border border-slate-200 p-4">
+              <p className="mb-2 font-semibold text-slate-800">{division.name}</p>
+
+              <div className="mb-3 space-y-1">
+                {division.tournaments.map((t) => (
+                  <Link
+                    key={t.id}
+                    href={`/admin/${liga}/torneos/${t.id}`}
+                    className="flex items-center justify-between rounded-lg px-3 py-2 text-sm hover:bg-slate-50"
                   >
-                    Guardar resultado
-                  </button>
-                </form>
-              );
-            })}
-          </div>
-        )}
+                    <span>
+                      {t.name} <span className="text-slate-400">— {FORMAT_LABEL[t.format] ?? t.format}</span>
+                    </span>
+                    <span style={{ color: "var(--league-primary, #16a34a)" }} className="font-medium">
+                      Gestionar →
+                    </span>
+                  </Link>
+                ))}
+                {division.tournaments.length === 0 && (
+                  <p className="px-3 text-sm text-slate-500">Sin torneos todavía.</p>
+                )}
+              </div>
+
+              <form action={createTournament} className="flex flex-wrap items-end gap-2 border-t border-slate-100 pt-3">
+                <Field label="Nuevo torneo">
+                  <input name="name" required placeholder="Ej. Apertura 2027" className="input" />
+                </Field>
+                <Field label="Sistema">
+                  <select name="format" className="input">
+                    <option value="LIGA">Liga (todos contra todos)</option>
+                    <option value="GRUPOS">Fase de grupos</option>
+                    <option value="ELIMINACION">Eliminación directa</option>
+                  </select>
+                </Field>
+                <Field label="Máx. equipos">
+                  <input name="maxTeams" type="number" min={2} placeholder="Opcional" className="input w-28" />
+                </Field>
+                <button className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white">Crear torneo</button>
+              </form>
+            </div>
+          );
+        })}
+
+        <form action={createDivision} className="flex items-end gap-2 rounded-xl border border-dashed border-slate-300 p-4">
+          <Field label="Nueva división">
+            <input name="name" required placeholder="Ej. Tercera División" className="input" />
+          </Field>
+          <button className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white">Crear división</button>
+        </form>
       </section>
     </div>
   );

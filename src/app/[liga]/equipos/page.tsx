@@ -4,6 +4,8 @@ import { getLeagueBySlug } from "@/lib/leagues";
 import { prisma } from "@/lib/prisma";
 import { Crest } from "@/components/Crest";
 
+export const dynamic = "force-dynamic";
+
 export default async function EquiposPage({ params }: { params: Promise<{ liga: string }> }) {
   const { liga } = await params;
   const league = await getLeagueBySlug(liga);

@@ -36,8 +36,8 @@ export default async function LeagueLayout({
           </div>
           <nav className="flex flex-wrap gap-1 text-sm font-medium">
             {[
-              { href: `/${liga}`, label: "Tabla" },
-              { href: `/${liga}/calendario`, label: "Calendario" },
+              { href: `/${liga}`, label: "Inicio" },
+              { href: `/${liga}/divisiones`, label: "Divisiones" },
               { href: `/${liga}/equipos`, label: "Equipos" },
             ].map((item) => (
               <Link
@@ -59,7 +59,8 @@ export default async function LeagueLayout({
           {league.name} · powered by{" "}
           <Link href="/" className="font-medium hover:underline">
             LigaPro
-          </Link>
+          </Link>{" "}
+          · creado por CMD Tech
         </p>
       </footer>
     </div>

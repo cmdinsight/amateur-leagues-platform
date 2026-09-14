@@ -1,6 +1,13 @@
 @import "tailwindcss";
 
+/*
+ * This product is designed as a light-themed surface (white cards, colored
+ * league headers) with text colors hardcoded for that (text-slate-900, etc).
+ * Force light color-scheme so a device in dark mode doesn't flip the page
+ * background to black while the text stays dark, making it unreadable.
+ */
 :root {
+  color-scheme: light;
   --background: #ffffff;
   --foreground: #171717;
 }
@@ -10,13 +17,6 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {

@@ -3,6 +3,8 @@ import Link from "next/link";
 import { getPlayerGlobalProfile } from "@/lib/stats";
 import { Crest } from "@/components/Crest";
 
+export const dynamic = "force-dynamic";
+
 export default async function PlayerGlobalPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const profile = await getPlayerGlobalProfile(id);
@@ -48,7 +50,10 @@ export default async function PlayerGlobalPage({ params }: { params: Promise<{ i
             >
               <div>
                 <p className="font-medium text-slate-800">{lb.teamName}</p>
-                <p className="text-xs text-slate-400">{lb.leagueName}</p>
+                <p className="text-xs text-slate-400">
+                  {lb.leagueName}
+                  {lb.divisionName ? ` · ${lb.divisionName}` : ""}
+                </p>
               </div>
               <span className="text-sm font-semibold text-slate-700">{lb.goals} goles</span>
             </Link>

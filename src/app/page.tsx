@@ -2,6 +2,8 @@ import Link from "next/link";
 import { getAllLeagues } from "@/lib/leagues";
 import { Crest } from "@/components/Crest";
 
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   const leagues = await getAllLeagues();
 
@@ -80,6 +82,10 @@ export default async function HomePage() {
           ))}
         </div>
       </section>
+
+      <footer className="border-t border-slate-100 bg-slate-50 py-4 text-center text-xs text-slate-400">
+        <p>LigaPro · creado por CMD Tech</p>
+      </footer>
     </div>
   );
 }
