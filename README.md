@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# LigaPro — plataforma para ligas deportivas amateur
 
-## Getting Started
+Prototipo funcional de una plataforma tipo "Liga del Rey / Zione", pero pensada
+como producto white-label: cada liga cliente tiene su propia marca (nombre,
+colores, logo) y todas comparten la misma base, lo que permite que el
+**historial de un jugador viaje con él** aunque cambie de equipo o incluso de
+liga — algo que las plataformas de referencia no ofrecen (su historial vive
+aislado dentro de cada liga).
 
-First, run the development server:
+## Qué incluye este prototipo
+
+- **Multi-tenant real**: cada liga vive en su propia ruta (`/guadalupe`,
+  `/centenario`, ...) con sus colores y logo aplicados a toda la interfaz.
+- **Tabla de posiciones y goleo** calculados automáticamente a partir de los
+  partidos jugados.
+- **Calendario** de próximos partidos y resultados.
+- **Equipos y plantillas**, con ficha de cada jugador.
+- **Perfil global del jugador** (`/jugador/[id]`): goles, tarjetas y
+  trayectoria agregados de todas las ligas y equipos en los que ha jugado.
+- **Panel de administración** (`/admin`) por liga, protegido con contraseña,
+  para:
+  - Editar nombre, ciudad, logo y colores de marca (con vista previa
+    instantánea en el sitio público).
+  - Capturar resultados de partidos y goleadores, lo que recalcula tabla y
+    goleo al instante.
+
+## Stack
+
+- Next.js 16 (App Router, Server Actions) + TypeScript + Tailwind CSS
+- Prisma ORM sobre SQLite (fácil de migrar a Postgres para producción)
+
+## Cómo correrlo localmente
 
 ```bash
+npm install
+cp .env.example .env
+npx prisma migrate dev
+npm run db:seed   # crea 2 ligas de ejemplo con equipos, jugadores y partidos
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abre `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Ligas de ejemplo: `/guadalupe` y `/centenario`.
+- Admin de cada liga: `/admin/guadalupe` o `/admin/centenario`, contraseña
+  `demo1234` (definida por liga en el modelo `League.adminPassword`; en
+  producción debe reemplazarse por autenticación real y contraseñas hasheadas).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Próximos pasos sugeridos para llevarlo a producción
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Autenticación real (hash de contraseñas, roles por liga, múltiples admins).
+- Subida de logos/imagenes (hoy se pega una URL) a un storage tipo S3.
+- Migrar SQLite → Postgres (el schema de Prisma ya es compatible).
+- Subdominios por liga (`guadalupe.tuplataforma.com`) en vez de `/guadalupe`.
+- Registro de tarjetas (amarillas/rojas) y sanciones desde el panel admin.
+- App/vista optimizada para móvil o app nativa, como la competencia.
+- Roles: super-admin de la plataforma (tú) vs. admin de cada liga (tu cliente).

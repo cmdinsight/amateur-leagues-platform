@@ -1,0 +1,137 @@
+// Prisma schema for the amateur sports leagues platform.
+// Multi-tenant: each League is a client (their own branding, teams and seasons).
+// Players are global entities so a career/history can follow them across teams and leagues.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model League {
+  id           String   @id @default(cuid())
+  slug         String   @unique
+  name         String
+  sport        String   @default("futbol7")
+  city         String?
+  logoUrl      String?
+  primaryColor String   @default("#16a34a")
+  accentColor  String   @default("#0f172a")
+  adminPassword String  @default("demo1234")
+  createdAt    DateTime @default(now())
+
+  seasons Season[]
+  teams   Team[]
+}
+
+model Season {
+  id        String   @id @default(cuid())
+  name      String
+  startDate DateTime
+  endDate   DateTime?
+  isActive  Boolean  @default(true)
+  leagueId  String
+  league    League   @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+
+  matches      Match[]
+  teamsInSeason TeamSeason[]
+
+  @@unique([leagueId, name])
+}
+
+model Team {
+  id       String  @id @default(cuid())
+  name     String
+  shortName String?
+  crestUrl String?
+  leagueId String
+  league   League  @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+
+  seasons     TeamSeason[]
+  rosterSpots RosterSpot[]
+  homeMatches Match[] @relation("HomeTeam")
+  awayMatches Match[] @relation("AwayTeam")
+  matchEvents MatchEvent[]
+
+  @@unique([leagueId, name])
+}
+
+model TeamSeason {
+  id       String @id @default(cuid())
+  teamId   String
+  seasonId String
+  team     Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  season   Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, seasonId])
+}
+
+// A Player is global across the whole platform, so their history can span
+// multiple teams and multiple leagues over time (the "historial global" feature).
+model Player {
+  id        String   @id @default(cuid())
+  fullName  String
+  photoUrl  String?
+  birthDate DateTime?
+  createdAt DateTime @default(now())
+
+  rosterSpots RosterSpot[]
+  matchEvents MatchEvent[]
+}
+
+// Links a Player to a Team for a given Season (their roster membership + shirt number).
+model RosterSpot {
+  id       String  @id @default(cuid())
+  number   Int?
+  position String?
+  playerId String
+  teamId   String
+  player   Player  @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  team     Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([playerId, teamId])
+}
+
+enum MatchStatus {
+  SCHEDULED
+  PLAYED
+  POSTPONED
+}
+
+model Match {
+  id         String      @id @default(cuid())
+  seasonId   String
+  season     Season      @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  matchDate  DateTime
+  venue      String?
+  status     MatchStatus @default(SCHEDULED)
+  homeTeamId String
+  awayTeamId String
+  homeTeam   Team        @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeam   Team        @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  homeScore  Int?
+  awayScore  Int?
+
+  events MatchEvent[]
+}
+
+enum MatchEventType {
+  GOAL
+  YELLOW_CARD
+  RED_CARD
+}
+
+model MatchEvent {
+  id       String         @id @default(cuid())
+  matchId  String
+  match    Match          @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  playerId String
+  player   Player         @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  teamId   String
+  team     Team           @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  type     MatchEventType
+  minute   Int?
+}
