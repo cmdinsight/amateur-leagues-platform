@@ -60,7 +60,10 @@ export default async function LeagueLayout({
           <Link href="/" className="font-medium hover:underline">
             LigaPro
           </Link>{" "}
-          · creado por CMD Tech
+          · creado por{" "}
+          <a href="https://cmdtech.uy" target="_blank" rel="noopener noreferrer" className="font-medium hover:underline">
+            CMD Tech
+          </a>
         </p>
       </footer>
     </div>

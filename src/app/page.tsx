@@ -84,7 +84,12 @@ export default async function HomePage() {
       </section>
 
       <footer className="border-t border-slate-100 bg-slate-50 py-4 text-center text-xs text-slate-400">
-        <p>LigaPro · creado por CMD Tech</p>
+        <p>
+          LigaPro · creado por{" "}
+          <a href="https://cmdtech.uy" target="_blank" rel="noopener noreferrer" className="font-medium hover:underline">
+            CMD Tech
+          </a>
+        </p>
       </footer>
     </div>
   );

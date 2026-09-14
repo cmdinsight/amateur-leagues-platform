@@ -1,6 +1,6 @@
 # LigaPro — plataforma para ligas deportivas amateur
 
-Creado por **CMD Tech**. Prototipo funcional de una plataforma tipo "Liga del
+Creado por [**CMD Tech**](https://cmdtech.uy). Prototipo funcional de una plataforma tipo "Liga del
 Rey / Zione", pero pensada como producto white-label: cada liga cliente tiene
 su propia marca (nombre, colores, logo), puede organizar varias divisiones y
 torneos con distintos sistemas de competencia, y el **historial de cada
