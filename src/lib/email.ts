@@ -1,7 +1,7 @@
 import { Resend } from "resend";
 
 const NOTIFY_EMAIL = process.env.CONTACT_NOTIFY_EMAIL ?? "administracion@coberturamedicad.com";
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL ?? "notificaciones@coberturamedicad.com";
 
 export async function notifyContactRequest(data: {
   fullName: string;

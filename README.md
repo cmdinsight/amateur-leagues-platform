@@ -88,15 +88,9 @@ Cada solicitud del formulario "Solicitá tu liga" queda guardada en la base
 (visible en `/admin/solicitudes`) y, si está configurada la variable
 `RESEND_API_KEY` (cuenta en [resend.com](https://resend.com)), además se
 envía un email de aviso a `administracion@coberturamedicad.com` (o a la
-dirección que definas en `CONTACT_NOTIFY_EMAIL`).
-
-**Importante:** mientras la cuenta de Resend no tenga un dominio propio
-verificado, el remitente de prueba `onboarding@resend.dev` solo puede
-entregar emails a la casilla con la que te registraste en Resend — a
-cualquier otra dirección (como `administracion@coberturamedicad.com`) el
-envío va a fallar. Para que llegue de verdad hay que verificar un dominio
-de CMD Tech en Resend (Domains → Add Domain) y configurar
-`RESEND_FROM_EMAIL` con una dirección de ese dominio.
+dirección que definas en `CONTACT_NOTIFY_EMAIL`), enviado desde
+`notificaciones@coberturamedicad.com` (dominio verificado en Resend; se
+puede cambiar con `RESEND_FROM_EMAIL`).
 
 ## Próximos pasos sugeridos para llevarlo a producción
 
