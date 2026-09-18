@@ -62,7 +62,7 @@ export async function createDivisionAction(slug: string, leagueId: string, formD
   await prisma.division.create({ data: { name, leagueId } });
   revalidatePath(`/admin/${slug}`);
   revalidatePath(`/${slug}`);
-  revalidatePath(`/${slug}/divisiones`);
+  revalidatePath(`/${slug}/series`);
 }
 
 export async function createTournamentAction(slug: string, divisionId: string, formData: FormData) {
@@ -83,7 +83,7 @@ export async function createTournamentAction(slug: string, divisionId: string, f
 
   revalidatePath(`/admin/${slug}`);
   revalidatePath(`/${slug}`);
-  revalidatePath(`/${slug}/divisiones/${divisionId}`);
+  revalidatePath(`/${slug}/series/${divisionId}`);
 }
 
 export async function createGroupAction(slug: string, tournamentId: string, formData: FormData) {
@@ -121,6 +121,7 @@ export async function scheduleMatchAction(slug: string, tournamentId: string, fo
   const venue = String(formData.get("venue") ?? "").trim() || null;
   const stage = String(formData.get("stage") ?? "").trim() || null;
   const groupId = String(formData.get("groupId") ?? "").trim() || null;
+  const roundRaw = String(formData.get("round") ?? "").trim();
 
   if (!homeTeamId || !awayTeamId || !dateStr || homeTeamId === awayTeamId) return;
 
@@ -129,6 +130,7 @@ export async function scheduleMatchAction(slug: string, tournamentId: string, fo
       tournamentId,
       groupId,
       stage,
+      round: roundRaw ? Number(roundRaw) : null,
       matchDate: new Date(dateStr),
       venue,
       homeTeamId,
@@ -141,6 +143,23 @@ export async function scheduleMatchAction(slug: string, tournamentId: string, fo
   revalidatePath(`/${slug}/torneos/${tournamentId}`);
 }
 
+export async function toggleGroupFinishedAction(slug: string, tournamentId: string, groupId: string, formData: FormData) {
+  await requireAuth(slug);
+  const isFinished = formData.get("isFinished") === "on";
+  await prisma.group.update({ where: { id: groupId }, data: { isFinished } });
+  revalidatePath(`/admin/${slug}/torneos/${tournamentId}`);
+  revalidatePath(`/${slug}/torneos/${tournamentId}`);
+}
+
+const EVENT_PREFIXES: { prefix: string; type: MatchEventType; side: "home" | "away" }[] = [
+  { prefix: "homeGoals_", type: MatchEventType.GOAL, side: "home" },
+  { prefix: "awayGoals_", type: MatchEventType.GOAL, side: "away" },
+  { prefix: "homeYellow_", type: MatchEventType.YELLOW_CARD, side: "home" },
+  { prefix: "awayYellow_", type: MatchEventType.YELLOW_CARD, side: "away" },
+  { prefix: "homeRed_", type: MatchEventType.RED_CARD, side: "home" },
+  { prefix: "awayRed_", type: MatchEventType.RED_CARD, side: "away" },
+];
+
 export async function submitResultAction(slug: string, matchId: string, formData: FormData) {
   await requireAuth(slug);
 
@@ -150,20 +169,30 @@ export async function submitResultAction(slug: string, matchId: string, formData
   const match = await prisma.match.findUnique({ where: { id: matchId } });
   if (!match) return;
 
-  const goalsByPlayer: { playerId: string; teamId: string; count: number }[] = [];
+  const events: { playerId: string; teamId: string; type: MatchEventType; count: number }[] = [];
   for (const [key, value] of formData.entries()) {
     const count = Number(value);
     if (!count) continue;
-    if (key.startsWith("homeGoals_")) goalsByPlayer.push({ playerId: key.replace("homeGoals_", ""), teamId: match.homeTeamId, count });
-    else if (key.startsWith("awayGoals_")) goalsByPlayer.push({ playerId: key.replace("awayGoals_", ""), teamId: match.awayTeamId, count });
+    for (const { prefix, type, side } of EVENT_PREFIXES) {
+      if (key.startsWith(prefix)) {
+        events.push({
+          playerId: key.replace(prefix, ""),
+          teamId: side === "home" ? match.homeTeamId : match.awayTeamId,
+          type,
+          count,
+        });
+      }
+    }
   }
 
   await prisma.$transaction(async (tx) => {
     await tx.match.update({ where: { id: matchId }, data: { homeScore, awayScore, status: MatchStatus.PLAYED } });
-    await tx.matchEvent.deleteMany({ where: { matchId, type: MatchEventType.GOAL } });
-    for (const g of goalsByPlayer) {
-      for (let i = 0; i < g.count; i++) {
-        await tx.matchEvent.create({ data: { matchId, playerId: g.playerId, teamId: g.teamId, type: MatchEventType.GOAL } });
+    await tx.matchEvent.deleteMany({
+      where: { matchId, type: { in: [MatchEventType.GOAL, MatchEventType.YELLOW_CARD, MatchEventType.RED_CARD] } },
+    });
+    for (const e of events) {
+      for (let i = 0; i < e.count; i++) {
+        await tx.matchEvent.create({ data: { matchId, playerId: e.playerId, teamId: e.teamId, type: e.type } });
       }
     }
   });
@@ -171,4 +200,85 @@ export async function submitResultAction(slug: string, matchId: string, formData
   revalidatePath(`/admin/${slug}/torneos/${match.tournamentId}`);
   revalidatePath(`/${slug}/torneos/${match.tournamentId}`);
   revalidatePath(`/${slug}`);
+}
+
+// ---------------- Sponsors ----------------
+
+export async function createSponsorAction(slug: string, leagueId: string, formData: FormData) {
+  await requireAuth(slug);
+  const name = String(formData.get("name") ?? "").trim();
+  const logoUrl = String(formData.get("logoUrl") ?? "").trim();
+  const linkUrl = String(formData.get("linkUrl") ?? "").trim() || null;
+  if (!name || !logoUrl) return;
+  await prisma.sponsor.create({ data: { leagueId, name, logoUrl, linkUrl } });
+  revalidatePath(`/admin/${slug}`);
+  revalidatePath(`/${slug}`, "layout");
+}
+
+export async function deleteSponsorAction(slug: string, sponsorId: string) {
+  await requireAuth(slug);
+  await prisma.sponsor.delete({ where: { id: sponsorId } });
+  revalidatePath(`/admin/${slug}`);
+  revalidatePath(`/${slug}`, "layout");
+}
+
+// ---------------- Photos ----------------
+
+export async function createPhotoAction(slug: string, leagueId: string, formData: FormData) {
+  await requireAuth(slug);
+  const url = String(formData.get("url") ?? "").trim();
+  const caption = String(formData.get("caption") ?? "").trim() || null;
+  if (!url) return;
+  await prisma.photo.create({ data: { leagueId, url, caption } });
+  revalidatePath(`/admin/${slug}`);
+  revalidatePath(`/${slug}/galeria`);
+}
+
+export async function deletePhotoAction(slug: string, photoId: string) {
+  await requireAuth(slug);
+  await prisma.photo.delete({ where: { id: photoId } });
+  revalidatePath(`/admin/${slug}`);
+  revalidatePath(`/${slug}/galeria`);
+}
+
+// ---------------- News ----------------
+
+export async function createNewsAction(slug: string, leagueId: string, formData: FormData) {
+  await requireAuth(slug);
+  const title = String(formData.get("title") ?? "").trim();
+  const body = String(formData.get("body") ?? "").trim();
+  if (!title || !body) return;
+  await prisma.newsPost.create({ data: { leagueId, title, body } });
+  revalidatePath(`/admin/${slug}`);
+  revalidatePath(`/${slug}`);
+  revalidatePath(`/${slug}/noticias`);
+}
+
+export async function deleteNewsAction(slug: string, postId: string) {
+  await requireAuth(slug);
+  await prisma.newsPost.delete({ where: { id: postId } });
+  revalidatePath(`/admin/${slug}`);
+  revalidatePath(`/${slug}`);
+  revalidatePath(`/${slug}/noticias`);
+}
+
+// ---------------- Free agents (jugadores libres / busco equipo) ----------------
+
+export async function createFreeAgentAction(slug: string, leagueId: string, formData: FormData) {
+  const type = String(formData.get("type") ?? "JUGADOR_LIBRE") as "JUGADOR_LIBRE" | "BUSCO_EQUIPO";
+  const fullName = String(formData.get("fullName") ?? "").trim();
+  const position = String(formData.get("position") ?? "").trim() || null;
+  const contact = String(formData.get("contact") ?? "").trim();
+  const message = String(formData.get("message") ?? "").trim() || null;
+  if (!fullName || !contact) return;
+
+  await prisma.freeAgentListing.create({ data: { leagueId, type, fullName, position, contact, message } });
+  revalidatePath(`/${slug}/jugadores-libres`);
+}
+
+export async function deleteFreeAgentAction(slug: string, listingId: string) {
+  await requireAuth(slug);
+  await prisma.freeAgentListing.delete({ where: { id: listingId } });
+  revalidatePath(`/admin/${slug}`);
+  revalidatePath(`/${slug}/jugadores-libres`);
 }

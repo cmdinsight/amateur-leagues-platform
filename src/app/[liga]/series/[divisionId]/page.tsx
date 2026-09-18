@@ -33,7 +33,7 @@ export default async function DivisionPage({
         <h1 className="text-xl font-bold text-slate-900">{division.name}</h1>
       </div>
 
-      <TotalsRow totals={totals} title="Histórico de la división" />
+      <TotalsRow totals={totals} title="Histórico de la serie" />
 
       <section>
         <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">Torneos</h2>
@@ -59,7 +59,7 @@ export default async function DivisionPage({
             </Link>
           ))}
           {division.tournaments.length === 0 && (
-            <p className="text-sm text-slate-500">Esta división aún no tiene torneos.</p>
+            <p className="text-sm text-slate-500">Esta serie aún no tiene torneos.</p>
           )}
         </div>
       </section>

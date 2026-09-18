@@ -61,7 +61,7 @@ export default async function EquipoPage({
       </section>
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">Divisiones y torneos</h2>
+        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">Series y torneos</h2>
         <div className="flex flex-wrap gap-2">
           {team.entries.map((e) => (
             <Link

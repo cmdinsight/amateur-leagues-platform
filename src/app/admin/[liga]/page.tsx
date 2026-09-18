@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getLeagueBySlug, getDivisions } from "@/lib/leagues";
+import { prisma } from "@/lib/prisma";
 import {
   isAdminAuthed,
   loginAction,
@@ -8,6 +9,13 @@ import {
   updateBrandingAction,
   createDivisionAction,
   createTournamentAction,
+  createSponsorAction,
+  deleteSponsorAction,
+  createPhotoAction,
+  deletePhotoAction,
+  createNewsAction,
+  deleteNewsAction,
+  deleteFreeAgentAction,
 } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -49,10 +57,19 @@ export default async function AdminLeaguePage({
     );
   }
 
-  const divisions = await getDivisions(league.id);
+  const [divisions, sponsors, photos, newsPosts, freeAgents] = await Promise.all([
+    getDivisions(league.id),
+    prisma.sponsor.findMany({ where: { leagueId: league.id }, orderBy: { createdAt: "asc" } }),
+    prisma.photo.findMany({ where: { leagueId: league.id }, orderBy: { createdAt: "desc" } }),
+    prisma.newsPost.findMany({ where: { leagueId: league.id }, orderBy: { publishedAt: "desc" } }),
+    prisma.freeAgentListing.findMany({ where: { leagueId: league.id }, orderBy: { createdAt: "desc" } }),
+  ]);
   const updateBranding = updateBrandingAction.bind(null, liga);
   const logout = logoutAction.bind(null, liga);
   const createDivision = createDivisionAction.bind(null, liga, league.id);
+  const createSponsor = createSponsorAction.bind(null, liga, league.id);
+  const createPhoto = createPhotoAction.bind(null, liga, league.id);
+  const createNews = createNewsAction.bind(null, liga, league.id);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 space-y-10">
@@ -92,7 +109,7 @@ export default async function AdminLeaguePage({
       </section>
 
       <section className="space-y-4">
-        <h2 className="font-semibold text-slate-800">Divisiones y torneos</h2>
+        <h2 className="font-semibold text-slate-800">Series y torneos</h2>
 
         {divisions.map((division) => {
           const createTournament = createTournamentAction.bind(null, liga, division.id);
@@ -141,11 +158,121 @@ export default async function AdminLeaguePage({
         })}
 
         <form action={createDivision} className="flex items-end gap-2 rounded-xl border border-dashed border-slate-300 p-4">
-          <Field label="Nueva división">
-            <input name="name" required placeholder="Ej. Tercera División" className="input" />
+          <Field label="Nueva serie">
+            <input name="name" required placeholder="Ej. Domingo" className="input" />
           </Field>
-          <button className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white">Crear división</button>
+          <button className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white">Crear serie</button>
         </form>
+      </section>
+
+      <section className="rounded-xl border border-slate-200 p-5">
+        <h2 className="mb-4 font-semibold text-slate-800">Sponsors</h2>
+        <div className="mb-4 space-y-2">
+          {sponsors.map((s) => {
+            const deleteSponsor = deleteSponsorAction.bind(null, liga, s.id);
+            return (
+              <div key={s.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={s.logoUrl} alt={s.name} className="h-6 object-contain" />
+                <span className="flex-1 px-3 text-slate-600">{s.name}</span>
+                <form action={deleteSponsor}>
+                  <button className="text-xs font-semibold text-red-600 hover:underline">Quitar</button>
+                </form>
+              </div>
+            );
+          })}
+          {sponsors.length === 0 && <p className="text-sm text-slate-500">Sin sponsors todavía.</p>}
+        </div>
+        <form action={createSponsor} className="flex flex-wrap items-end gap-2 border-t border-slate-100 pt-3">
+          <Field label="Nombre">
+            <input name="name" required className="input" />
+          </Field>
+          <Field label="URL del logo">
+            <input name="logoUrl" required placeholder="https://..." className="input" />
+          </Field>
+          <Field label="Link (opcional)">
+            <input name="linkUrl" placeholder="https://..." className="input" />
+          </Field>
+          <button className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white">Agregar</button>
+        </form>
+      </section>
+
+      <section className="rounded-xl border border-slate-200 p-5">
+        <h2 className="mb-4 font-semibold text-slate-800">Galería</h2>
+        <div className="mb-4 grid grid-cols-3 gap-2 sm:grid-cols-4">
+          {photos.map((p) => {
+            const deletePhoto = deletePhotoAction.bind(null, liga, p.id);
+            return (
+              <div key={p.id} className="relative">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={p.url} alt={p.caption ?? ""} className="aspect-square w-full rounded-lg object-cover" />
+                <form action={deletePhoto} className="absolute right-1 top-1">
+                  <button className="rounded-full bg-black/60 px-2 py-0.5 text-xs text-white">✕</button>
+                </form>
+              </div>
+            );
+          })}
+          {photos.length === 0 && <p className="text-sm text-slate-500">Sin fotos todavía.</p>}
+        </div>
+        <form action={createPhoto} className="flex flex-wrap items-end gap-2 border-t border-slate-100 pt-3">
+          <Field label="URL de la foto">
+            <input name="url" required placeholder="https://..." className="input" />
+          </Field>
+          <Field label="Descripción">
+            <input name="caption" placeholder="Opcional" className="input" />
+          </Field>
+          <button className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white">Agregar</button>
+        </form>
+      </section>
+
+      <section className="rounded-xl border border-slate-200 p-5">
+        <h2 className="mb-4 font-semibold text-slate-800">Noticias</h2>
+        <div className="mb-4 space-y-2">
+          {newsPosts.map((post) => {
+            const deleteNews = deleteNewsAction.bind(null, liga, post.id);
+            return (
+              <div key={post.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm">
+                <span className="flex-1 font-medium text-slate-700">{post.title}</span>
+                <form action={deleteNews}>
+                  <button className="text-xs font-semibold text-red-600 hover:underline">Borrar</button>
+                </form>
+              </div>
+            );
+          })}
+          {newsPosts.length === 0 && <p className="text-sm text-slate-500">Sin noticias todavía.</p>}
+        </div>
+        <form action={createNews} className="space-y-2 border-t border-slate-100 pt-3">
+          <Field label="Título">
+            <input name="title" required className="input w-full" />
+          </Field>
+          <Field label="Contenido">
+            <textarea name="body" required rows={3} className="input w-full" />
+          </Field>
+          <button className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white">Publicar</button>
+        </form>
+      </section>
+
+      <section className="rounded-xl border border-slate-200 p-5">
+        <h2 className="mb-4 font-semibold text-slate-800">Jugadores libres / busco equipo</h2>
+        <div className="space-y-2">
+          {freeAgents.map((f) => {
+            const deleteListing = deleteFreeAgentAction.bind(null, liga, f.id);
+            return (
+              <div key={f.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm">
+                <span className="flex-1 text-slate-700">
+                  <span className="font-medium">{f.fullName}</span>{" "}
+                  <span className="text-xs text-slate-400">
+                    · {f.type === "JUGADOR_LIBRE" ? "Jugador libre" : "Busca equipo"} · {f.contact}
+                  </span>
+                </span>
+                <form action={deleteListing}>
+                  <button className="text-xs font-semibold text-red-600 hover:underline">Borrar</button>
+                </form>
+              </div>
+            );
+          })}
+          {freeAgents.length === 0 && <p className="text-sm text-slate-500">Sin publicaciones todavía.</p>}
+        </div>
       </section>
     </div>
   );

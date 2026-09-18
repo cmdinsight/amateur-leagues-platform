@@ -25,8 +25,59 @@ model League {
   adminPassword String   @default("demo1234")
   createdAt     DateTime @default(now())
 
-  divisions Division[]
-  teams     Team[]
+  divisions   Division[]
+  teams       Team[]
+  sponsors    Sponsor[]
+  photos      Photo[]
+  newsPosts   NewsPost[]
+  freeAgents  FreeAgentListing[]
+}
+
+model Sponsor {
+  id        String   @id @default(cuid())
+  leagueId  String
+  league    League   @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  name      String
+  logoUrl   String
+  linkUrl   String?
+  createdAt DateTime @default(now())
+}
+
+model Photo {
+  id        String   @id @default(cuid())
+  leagueId  String
+  league    League   @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  url       String
+  caption   String?
+  createdAt DateTime @default(now())
+}
+
+model NewsPost {
+  id          String   @id @default(cuid())
+  leagueId    String
+  league      League   @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  title       String
+  body        String
+  publishedAt DateTime @default(now())
+}
+
+enum FreeAgentType {
+  JUGADOR_LIBRE
+  BUSCO_EQUIPO
+}
+
+// Self-serve board: players looking for a team, or teams recruiting players.
+// A lightweight stand-in for full player accounts/auth (see README).
+model FreeAgentListing {
+  id        String        @id @default(cuid())
+  leagueId  String
+  league    League        @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  type      FreeAgentType
+  fullName  String
+  position  String?
+  contact   String
+  message   String?
+  createdAt DateTime      @default(now())
 }
 
 // A division groups teams by competitive level (e.g. "Primera División",
@@ -75,6 +126,7 @@ model Group {
   name         String
   tournamentId String
   tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  isFinished   Boolean    @default(false)
 
   entries TeamTournament[]
   matches Match[]
@@ -154,8 +206,9 @@ model Match {
   groupId      String?
   group        Group?      @relation(fields: [groupId], references: [id], onDelete: SetNull)
   stage        String? // e.g. "Fase de grupos", "Cuartos de final", "Semifinal", "Final"
+  round        Int? // "Fecha N" — matchday number within the tournament/group
   matchDate    DateTime
-  venue        String?
+  venue        String? // cancha
   status       MatchStatus @default(SCHEDULED)
   homeTeamId   String
   awayTeamId   String

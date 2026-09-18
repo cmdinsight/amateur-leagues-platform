@@ -117,6 +117,116 @@ export async function getTopScorers(tournamentId: string, groupId?: string, limi
     .slice(0, limit);
 }
 
+export type GoalkeeperRow = {
+  playerId: string;
+  fullName: string;
+  teamId: string;
+  teamName: string;
+  matchesPlayed: number;
+  goalsConceded: number;
+  average: number;
+};
+
+// Approximate "imbatibles" ranking: we don't track per-match lineups, so each
+// team's current goalkeeper (roster position "Portero") is credited with the
+// goals their team conceded across every match they played in this scope.
+export async function getGoalkeeperRanking(
+  tournamentId: string,
+  groupId?: string,
+  limit = 10,
+): Promise<GoalkeeperRow[]> {
+  const entries = await prisma.teamTournament.findMany({
+    where: { tournamentId, ...(groupId ? { groupId } : {}) },
+    include: {
+      team: {
+        include: { rosterSpots: { where: { position: { contains: "portero", mode: "insensitive" } }, include: { player: true } } },
+      },
+    },
+  });
+
+  const matches = await prisma.match.findMany({
+    where: { tournamentId, status: MatchStatus.PLAYED, ...(groupId ? { groupId } : {}) },
+  });
+
+  const rows: GoalkeeperRow[] = [];
+  for (const entry of entries) {
+    const keeper = entry.team.rosterSpots[0];
+    if (!keeper) continue;
+
+    let matchesPlayed = 0;
+    let goalsConceded = 0;
+    for (const m of matches) {
+      const isHome = m.homeTeamId === entry.teamId;
+      const isAway = m.awayTeamId === entry.teamId;
+      if (!isHome && !isAway) continue;
+      if (m.homeScore == null || m.awayScore == null) continue;
+      matchesPlayed += 1;
+      goalsConceded += isHome ? m.awayScore : m.homeScore;
+    }
+    if (matchesPlayed === 0) continue;
+
+    rows.push({
+      playerId: keeper.playerId,
+      fullName: keeper.player.fullName,
+      teamId: entry.teamId,
+      teamName: entry.team.name,
+      matchesPlayed,
+      goalsConceded,
+      average: Math.round((goalsConceded / matchesPlayed) * 100) / 100,
+    });
+  }
+
+  return rows.sort((a, b) => a.average - b.average || a.goalsConceded - b.goalsConceded).slice(0, limit);
+}
+
+export type SancionRow = {
+  playerId: string;
+  fullName: string;
+  teamId: string;
+  teamName: string;
+  yellowCards: number;
+  redCards: number;
+  suspended: boolean;
+};
+
+export async function getSanciones(tournamentId: string, groupId?: string): Promise<SancionRow[]> {
+  const events = await prisma.matchEvent.findMany({
+    where: {
+      type: { in: [MatchEventType.YELLOW_CARD, MatchEventType.RED_CARD] },
+      match: { tournamentId, ...(groupId ? { groupId } : {}) },
+    },
+    include: { player: true, team: true },
+  });
+
+  const byPlayer = new Map<string, SancionRow>();
+  for (const e of events) {
+    const key = `${e.playerId}-${e.teamId}`;
+    let row = byPlayer.get(key);
+    if (!row) {
+      row = {
+        playerId: e.playerId,
+        fullName: e.player.fullName,
+        teamId: e.teamId,
+        teamName: e.team.name,
+        yellowCards: 0,
+        redCards: 0,
+        suspended: false,
+      };
+      byPlayer.set(key, row);
+    }
+    if (e.type === MatchEventType.YELLOW_CARD) row.yellowCards += 1;
+    else row.redCards += 1;
+  }
+
+  for (const row of byPlayer.values()) {
+    row.suspended = row.redCards > 0 || row.yellowCards >= 3;
+  }
+
+  return Array.from(byPlayer.values()).sort(
+    (a, b) => b.redCards - a.redCards || b.yellowCards - a.yellowCards,
+  );
+}
+
 export type LeagueTotals = {
   totalGoals: number;
   totalMatchesPlayed: number;

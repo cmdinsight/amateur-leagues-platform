@@ -10,6 +10,10 @@ function daysFromNow(days: number, hour = 16) {
 }
 
 async function main() {
+  await prisma.freeAgentListing.deleteMany();
+  await prisma.newsPost.deleteMany();
+  await prisma.photo.deleteMany();
+  await prisma.sponsor.deleteMany();
   await prisma.matchEvent.deleteMany();
   await prisma.match.deleteMany();
   await prisma.teamTournament.deleteMany();
@@ -109,13 +113,14 @@ async function main() {
     daysAgo: number,
     homeGoals: { id: string }[] = [],
     awayGoals: { id: string }[] = [],
-    opts: { groupId?: string; stage?: string } = {},
+    opts: { groupId?: string; stage?: string; round?: number; cards?: { player: { id: string }; team: { id: string }; type: MatchEventType }[] } = {},
   ) {
     const match = await prisma.match.create({
       data: {
         tournamentId,
         groupId: opts.groupId,
         stage: opts.stage,
+        round: opts.round,
         matchDate: daysFromNow(-daysAgo),
         status: MatchStatus.PLAYED,
         homeTeamId: home.id,
@@ -127,24 +132,45 @@ async function main() {
     });
     for (const p of homeGoals) await prisma.matchEvent.create({ data: { matchId: match.id, playerId: p.id, teamId: home.id, type: MatchEventType.GOAL } });
     for (const p of awayGoals) await prisma.matchEvent.create({ data: { matchId: match.id, playerId: p.id, teamId: away.id, type: MatchEventType.GOAL } });
+    for (const c of opts.cards ?? [])
+      await prisma.matchEvent.create({ data: { matchId: match.id, playerId: c.player.id, teamId: c.team.id, type: c.type } });
     return match;
   }
 
-  await playMatch(trnGua1.id, hal, rce, 3, 1, 21, [diego, diego, pedro], [braulio]);
-  await playMatch(trnGua1.id, atn, fen, 2, 2, 21, [uriel, beto], [luis, luis]);
-  await playMatch(trnGua1.id, hal, atn, 4, 0, 14, [diego, diego, ivan, pedro], []);
-  await playMatch(trnGua1.id, rce, fen, 1, 1, 14, [chuy], [luis]);
-  await playMatch(trnGua1.id, fen, hal, 1, 2, 7, [kevin], [diego, oscar]);
+  await playMatch(trnGua1.id, hal, rce, 3, 1, 21, [diego, diego, pedro], [braulio], {
+    round: 1,
+    cards: [{ player: braulio, team: rce, type: MatchEventType.YELLOW_CARD }],
+  });
+  await playMatch(trnGua1.id, atn, fen, 2, 2, 21, [uriel, beto], [luis, luis], {
+    round: 1,
+    cards: [
+      { player: uriel, team: atn, type: MatchEventType.YELLOW_CARD },
+      { player: luis, team: fen, type: MatchEventType.YELLOW_CARD },
+    ],
+  });
+  await playMatch(trnGua1.id, hal, atn, 4, 0, 14, [diego, diego, ivan, pedro], [], { round: 2 });
+  await playMatch(trnGua1.id, rce, fen, 1, 1, 14, [chuy], [luis], {
+    round: 2,
+    cards: [{ player: luis, team: fen, type: MatchEventType.YELLOW_CARD }],
+  });
+  await playMatch(trnGua1.id, fen, hal, 1, 2, 7, [kevin], [diego, oscar], { round: 3 });
   // Emilio scores for Real Cemento here, then later for Atlético Norte — shows cross-team movement.
-  await playMatch(trnGua1.id, atn, rce, 3, 2, 7, [uriel, uriel, beto], [braulio, emilio]);
-  await playMatch(trnGua1.id, atn, fen, 2, 1, 2, [emilio, uriel], [luis]);
-  await prisma.match.create({ data: { tournamentId: trnGua1.id, matchDate: daysFromNow(3), homeTeamId: hal.id, awayTeamId: fen.id, venue: "Cancha Central" } });
-  await prisma.match.create({ data: { tournamentId: trnGua1.id, matchDate: daysFromNow(3), homeTeamId: rce.id, awayTeamId: atn.id, venue: "Cancha Norte" } });
+  await playMatch(trnGua1.id, atn, rce, 3, 2, 7, [uriel, uriel, beto], [braulio, emilio], {
+    round: 3,
+    cards: [{ player: emilio, team: rce, type: MatchEventType.RED_CARD }],
+  });
+  // Luis reaches 3 yellow cards here — shows the "Suspendido" flag in Sanciones.
+  await playMatch(trnGua1.id, atn, fen, 2, 1, 2, [emilio, uriel], [luis], {
+    round: 4,
+    cards: [{ player: luis, team: fen, type: MatchEventType.YELLOW_CARD }],
+  });
+  await prisma.match.create({ data: { tournamentId: trnGua1.id, round: 5, matchDate: daysFromNow(3), homeTeamId: hal.id, awayTeamId: fen.id, venue: "Cancha Central" } });
+  await prisma.match.create({ data: { tournamentId: trnGua1.id, round: 5, matchDate: daysFromNow(3), homeTeamId: rce.id, awayTeamId: atn.id, venue: "Cancha Norte" } });
 
-  await playMatch(trnGua2.id, jsu, uce, 2, 1, 10, [dario, santi], [ceci]);
-  await playMatch(trnGua2.id, eaz, jsu, 0, 3, 10, [], [dario, dario, santi]);
-  await playMatch(trnGua2.id, uce, eaz, 2, 2, 3, [ceci, nayo], [facundo2, facundo2]);
-  await prisma.match.create({ data: { tournamentId: trnGua2.id, matchDate: daysFromNow(4), homeTeamId: jsu.id, awayTeamId: eaz.id } });
+  await playMatch(trnGua2.id, jsu, uce, 2, 1, 10, [dario, santi], [ceci], { round: 1 });
+  await playMatch(trnGua2.id, eaz, jsu, 0, 3, 10, [], [dario, dario, santi], { round: 1 });
+  await playMatch(trnGua2.id, uce, eaz, 2, 2, 3, [ceci, nayo], [facundo2, facundo2], { round: 2 });
+  await prisma.match.create({ data: { tournamentId: trnGua2.id, round: 3, matchDate: daysFromNow(4), homeTeamId: jsu.id, awayTeamId: eaz.id } });
 
   // ---------------- Liga Centenario (with a GRUPOS tournament) ----------------
   const centenario = await prisma.league.create({
@@ -155,7 +181,7 @@ async function main() {
     data: { name: "Clausura 2026", divisionId: divCen1.id, format: TournamentFormat.GRUPOS, maxTeams: 8, startDate: daysFromNow(-15) },
   });
   const grpA = await prisma.group.create({ data: { name: "Grupo A", tournamentId: trnCen1.id } });
-  const grpB = await prisma.group.create({ data: { name: "Grupo B", tournamentId: trnCen1.id } });
+  const grpB = await prisma.group.create({ data: { name: "Grupo B", tournamentId: trnCen1.id, isFinished: true } });
 
   const and = await prisma.team.create({ data: { name: "Los Andes 7", shortName: "AND", leagueId: centenario.id } });
   const cor = await prisma.team.create({ data: { name: "Cordón United", shortName: "COR", leagueId: centenario.id } });
@@ -187,6 +213,71 @@ async function main() {
   await playMatch(trnCen1.id, mal, pro, 1, 1, 5, [ramiro], [seba], { groupId: grpB.id, stage: "Fase de grupos" });
   await prisma.match.create({
     data: { tournamentId: trnCen1.id, groupId: grpA.id, stage: "Semifinal", matchDate: daysFromNow(6), homeTeamId: and.id, awayTeamId: cor.id },
+  });
+
+  await prisma.sponsor.createMany({
+    data: [
+      { leagueId: guadalupe.id, name: "Casmu", logoUrl: "https://placehold.co/240x80/16a34a/ffffff/png?text=CASMU" },
+      { leagueId: guadalupe.id, name: "Kelme", logoUrl: "https://placehold.co/240x80/0f172a/ffffff/png?text=KELME" },
+      { leagueId: centenario.id, name: "Naker", logoUrl: "https://placehold.co/240x80/2563eb/ffffff/png?text=NAKER" },
+      { leagueId: centenario.id, name: "Matesuru", logoUrl: "https://placehold.co/240x80/f97316/ffffff/png?text=MATESURU" },
+    ],
+  });
+
+  await prisma.photo.createMany({
+    data: [
+      { leagueId: guadalupe.id, url: "https://placehold.co/600x600/16a34a/ffffff/png?text=Fecha+3", caption: "Fecha 3 - Halcones FC" },
+      { leagueId: guadalupe.id, url: "https://placehold.co/600x600/0f172a/ffffff/png?text=Gol", caption: "Festejo de gol" },
+      { leagueId: centenario.id, url: "https://placehold.co/600x600/2563eb/ffffff/png?text=Clausura", caption: "Clausura 2026" },
+    ],
+  });
+
+  await prisma.newsPost.createMany({
+    data: [
+      {
+        leagueId: guadalupe.id,
+        title: "Arranca la fecha 5 del Apertura",
+        body: "Este fin de semana se juega la fecha 5 con Halcones FC como líder invicto. No te la pierdas.",
+      },
+      {
+        leagueId: guadalupe.id,
+        title: "Nueva Segunda División",
+        body: "Sumamos una Segunda División con tres equipos nuevos: Juventud Sur, Unión Central y Estrella Azul.",
+      },
+      {
+        leagueId: centenario.id,
+        title: "Definiciones en la fase de grupos",
+        body: "El Grupo B ya cerró su fase de grupos. Los Andes 7 y Cordón United se juegan el pase en semifinal.",
+      },
+    ],
+  });
+
+  await prisma.freeAgentListing.createMany({
+    data: [
+      {
+        leagueId: guadalupe.id,
+        type: "JUGADOR_LIBRE",
+        fullName: "Rodrigo Elizondo",
+        position: "Delantero",
+        contact: "rodrigo.elizondo@example.com",
+        message: "Disponible fines de semana.",
+      },
+      {
+        leagueId: guadalupe.id,
+        type: "BUSCO_EQUIPO",
+        fullName: "Atlético Vintage",
+        position: "Defensa",
+        contact: "5215512345678",
+        message: "Buscamos 2 defensas para el Apertura.",
+      },
+      {
+        leagueId: centenario.id,
+        type: "JUGADOR_LIBRE",
+        fullName: "Bruno Machado",
+        position: "Portero",
+        contact: "099123456",
+      },
+    ],
   });
 
   console.log("Seed complete:");
