@@ -61,10 +61,15 @@ en Neon. Para que el build y el runtime funcionen ahí, configura en el
 proyecto de Vercel (Settings → Environment Variables) una variable
 `DATABASE_URL` con la cadena de conexión (pooled) de Neon.
 
+La carga de logos, escudos y fotos usa Vercel Blob. Hace falta un Blob
+store conectado al proyecto (Storage → Create Database → Blob, acceso
+**Public**, con la opción "Add a read-write token env var to this
+connection" tildada) para que quede configurada la variable
+`BLOB_READ_WRITE_TOKEN`.
+
 ## Próximos pasos sugeridos para llevarlo a producción
 
 - Autenticación real (hash de contraseñas, roles por liga, múltiples admins).
-- Subida de logos/imágenes (hoy se pega una URL) a un storage tipo S3.
 - Subdominios por liga (`guadalupe.tuplataforma.com`) en vez de `/guadalupe`.
 - Registro de tarjetas (amarillas/rojas) y sanciones desde el panel admin.
 - Generación automática de llaves/brackets para el formato de eliminación
