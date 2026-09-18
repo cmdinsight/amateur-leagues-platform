@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getLeagueBySlug, getDivisions } from "@/lib/leagues";
 import { prisma } from "@/lib/prisma";
+import { OnboardingTour } from "@/components/OnboardingTour";
 import {
   isAdminAuthed,
   loginAction,
@@ -16,6 +17,7 @@ import {
   createNewsAction,
   deleteNewsAction,
   deleteFreeAgentAction,
+  dismissOnboardingAction,
 } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -71,9 +73,12 @@ export default async function AdminLeaguePage({
   const createSponsor = createSponsorAction.bind(null, liga, league.id);
   const createPhoto = createPhotoAction.bind(null, liga, league.id);
   const createNews = createNewsAction.bind(null, liga, league.id);
+  const dismissOnboarding = dismissOnboardingAction.bind(null, liga);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 space-y-10">
+      {!league.onboardingSeenAt && <OnboardingTour dismissAction={dismissOnboarding} />}
+
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-slate-900">Panel admin — {league.name}</h1>
         <form action={logout}>

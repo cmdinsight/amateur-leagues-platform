@@ -63,8 +63,13 @@ Abre `http://localhost:3000`.
 - Admin de cada liga: `/admin/guadalupe` o `/admin/centenario`, contraseña
   `demo1234` (definida por liga en el modelo `League.adminPassword`; en
   producción debe reemplazarse por autenticación real y contraseñas hasheadas).
-- Solicitudes de nuevos clientes: `/admin/solicitudes`, contraseña
-  `cmdtech2026` (o la que definas en la variable `PLATFORM_ADMIN_PASSWORD`).
+- Panel de CMD Tech (solicitudes de clientes + alta de ligas nuevas):
+  `/admin/solicitudes`, contraseña `cmdtech2026` (o la que definas en la
+  variable `PLATFORM_ADMIN_PASSWORD`). Ahí se crea cada liga cliente
+  (identificador, contraseña) — es el único lugar para dar de alta una
+  liga nueva, no hay otra forma de crearla desde la web.
+- La primera vez que un admin de liga entra a su panel, ve un tour corto
+  de bienvenida (se puede saltar); no vuelve a aparecer después.
 
 ## Despliegue
 

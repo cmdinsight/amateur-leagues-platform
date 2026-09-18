@@ -37,6 +37,8 @@ model League {
   accentColor   String   @default("#0f172a")
   adminPassword String   @default("demo1234")
   createdAt     DateTime @default(now())
+  // Null until the league's admin dismisses the first-login welcome tour.
+  onboardingSeenAt DateTime?
 
   divisions   Division[]
   teams       Team[]

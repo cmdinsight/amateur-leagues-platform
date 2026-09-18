@@ -38,6 +38,12 @@ async function requireAuth(slug: string) {
   if (!authed) redirect(`/admin/${slug}`);
 }
 
+export async function dismissOnboardingAction(slug: string) {
+  await requireAuth(slug);
+  await prisma.league.update({ where: { slug }, data: { onboardingSeenAt: new Date() } });
+  revalidatePath(`/admin/${slug}`);
+}
+
 export async function updateBrandingAction(slug: string, formData: FormData) {
   await requireAuth(slug);
 

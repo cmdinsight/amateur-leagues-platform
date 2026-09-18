@@ -72,3 +72,38 @@ export async function deleteContactRequestAction(requestId: string) {
   await prisma.contactRequest.delete({ where: { id: requestId } });
   revalidatePath("/admin/solicitudes");
 }
+
+// ---------------- Creating a new client league (platform-level) ----------------
+
+function slugify(input: string) {
+  return input
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function randomPassword() {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+export async function createLeagueAction(formData: FormData) {
+  const authed = await isPlatformAuthed();
+  if (!authed) redirect("/admin/solicitudes");
+
+  const name = String(formData.get("name") ?? "").trim();
+  const city = String(formData.get("city") ?? "").trim() || null;
+  const requestedSlug = slugify(String(formData.get("slug") ?? "").trim() || name);
+  const adminPassword = String(formData.get("adminPassword") ?? "").trim() || randomPassword();
+  if (!name || !requestedSlug) redirect("/admin/solicitudes?error=liga");
+
+  let slug = requestedSlug;
+  for (let i = 2; await prisma.league.findUnique({ where: { slug } }); i++) {
+    slug = `${requestedSlug}-${i}`;
+  }
+
+  await prisma.league.create({ data: { name, slug, city, adminPassword } });
+
+  redirect(`/admin/solicitudes?created=${slug}`);
+}
