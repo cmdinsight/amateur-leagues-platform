@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "LigaPro — Plataforma para ligas deportivas amateur",
+  title: "Plataforma para ligas deportivas amateur — CMD Tech",
   description:
     "Gestiona equipos, jugadores, calendarios y estadísticas de tu liga amateur, con marca propia y el historial global de cada jugador.",
 };

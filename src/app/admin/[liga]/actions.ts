@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { MatchEventType, MatchStatus, TournamentFormat } from "@prisma/client";
+import { isUploadedFile, uploadToBlob } from "@/lib/blob";
 
 function adminCookieName(slug: string) {
   return `admin_${slug}`;
@@ -42,13 +43,15 @@ export async function updateBrandingAction(slug: string, formData: FormData) {
 
   const name = String(formData.get("name") ?? "").trim();
   const city = String(formData.get("city") ?? "").trim();
-  const logoUrl = String(formData.get("logoUrl") ?? "").trim();
   const primaryColor = String(formData.get("primaryColor") ?? "#16a34a");
   const accentColor = String(formData.get("accentColor") ?? "#0f172a");
 
+  const logoFile = formData.get("logoFile");
+  const logoUrl = isUploadedFile(logoFile) ? await uploadToBlob(logoFile, "logos") : undefined;
+
   await prisma.league.update({
     where: { slug },
-    data: { name: name || undefined, city: city || null, logoUrl: logoUrl || null, primaryColor, accentColor },
+    data: { name: name || undefined, city: city || null, primaryColor, accentColor, ...(logoUrl ? { logoUrl } : {}) },
   });
 
   revalidatePath(`/${slug}`, "layout");
@@ -245,9 +248,10 @@ export async function submitResultAction(slug: string, matchId: string, formData
 export async function createSponsorAction(slug: string, leagueId: string, formData: FormData) {
   await requireAuth(slug);
   const name = String(formData.get("name") ?? "").trim();
-  const logoUrl = String(formData.get("logoUrl") ?? "").trim();
   const linkUrl = String(formData.get("linkUrl") ?? "").trim() || null;
-  if (!name || !logoUrl) return;
+  const logoFile = formData.get("logoFile");
+  if (!name || !isUploadedFile(logoFile)) return;
+  const logoUrl = await uploadToBlob(logoFile, "sponsors");
   await prisma.sponsor.create({ data: { leagueId, name, logoUrl, linkUrl } });
   revalidatePath(`/admin/${slug}`);
   revalidatePath(`/${slug}`, "layout");
@@ -264,9 +268,10 @@ export async function deleteSponsorAction(slug: string, sponsorId: string) {
 
 export async function createPhotoAction(slug: string, leagueId: string, formData: FormData) {
   await requireAuth(slug);
-  const url = String(formData.get("url") ?? "").trim();
   const caption = String(formData.get("caption") ?? "").trim() || null;
-  if (!url) return;
+  const photoFile = formData.get("photoFile");
+  if (!isUploadedFile(photoFile)) return;
+  const url = await uploadToBlob(photoFile, "gallery");
   await prisma.photo.create({ data: { leagueId, url, caption } });
   revalidatePath(`/admin/${slug}`);
   revalidatePath(`/${slug}/galeria`);
@@ -319,4 +324,76 @@ export async function deleteFreeAgentAction(slug: string, listingId: string) {
   await prisma.freeAgentListing.delete({ where: { id: listingId } });
   revalidatePath(`/admin/${slug}`);
   revalidatePath(`/${slug}/jugadores-libres`);
+}
+
+// ---------------- Teams & players ----------------
+
+export async function createTeamAction(slug: string, leagueId: string, formData: FormData) {
+  await requireAuth(slug);
+  const name = String(formData.get("name") ?? "").trim();
+  const shortName = String(formData.get("shortName") ?? "").trim() || null;
+  if (!name) return;
+
+  const crestFile = formData.get("crestFile");
+  const crestUrl = isUploadedFile(crestFile) ? await uploadToBlob(crestFile, "crests") : null;
+
+  await prisma.team.create({ data: { leagueId, name, shortName, crestUrl } });
+  revalidatePath(`/admin/${slug}/equipos`);
+  revalidatePath(`/${slug}/equipos`);
+}
+
+export async function deleteTeamAction(slug: string, teamId: string) {
+  await requireAuth(slug);
+  const matchCount = await prisma.match.count({ where: { OR: [{ homeTeamId: teamId }, { awayTeamId: teamId }] } });
+  if (matchCount > 0) return;
+  await prisma.team.delete({ where: { id: teamId } });
+  revalidatePath(`/admin/${slug}/equipos`);
+  revalidatePath(`/${slug}/equipos`);
+  redirect(`/admin/${slug}/equipos`);
+}
+
+export async function createPlayerForTeamAction(slug: string, teamId: string, formData: FormData) {
+  await requireAuth(slug);
+  const fullName = String(formData.get("fullName") ?? "").trim();
+  const numberRaw = String(formData.get("number") ?? "").trim();
+  const position = String(formData.get("position") ?? "").trim() || null;
+  if (!fullName) return;
+
+  const photoFile = formData.get("photoFile");
+  const photoUrl = isUploadedFile(photoFile) ? await uploadToBlob(photoFile, "players") : null;
+
+  const player = await prisma.player.create({ data: { fullName, photoUrl } });
+  await prisma.rosterSpot.create({
+    data: { playerId: player.id, teamId, number: numberRaw ? Number(numberRaw) : null, position },
+  });
+
+  revalidatePath(`/admin/${slug}/equipos/${teamId}`);
+  revalidatePath(`/${slug}/equipos/${teamId}`);
+}
+
+export async function addExistingPlayerToTeamAction(slug: string, teamId: string, formData: FormData) {
+  await requireAuth(slug);
+  const playerId = String(formData.get("playerId") ?? "").trim();
+  const numberRaw = String(formData.get("number") ?? "").trim();
+  const position = String(formData.get("position") ?? "").trim() || null;
+  if (!playerId) return;
+
+  await prisma.rosterSpot.upsert({
+    where: { playerId_teamId: { playerId, teamId } },
+    update: { number: numberRaw ? Number(numberRaw) : null, position },
+    create: { playerId, teamId, number: numberRaw ? Number(numberRaw) : null, position },
+  });
+
+  revalidatePath(`/admin/${slug}/equipos/${teamId}`);
+  revalidatePath(`/${slug}/equipos/${teamId}`);
+}
+
+// Removes the player from this team's roster only — their historical stats
+// and match events stay attributed to this team, and they're free to be
+// added to a different team (a player can move regardless of division).
+export async function removeRosterSpotAction(slug: string, teamId: string, rosterSpotId: string) {
+  await requireAuth(slug);
+  await prisma.rosterSpot.delete({ where: { id: rosterSpotId } });
+  revalidatePath(`/admin/${slug}/equipos/${teamId}`);
+  revalidatePath(`/${slug}/equipos/${teamId}`);
 }

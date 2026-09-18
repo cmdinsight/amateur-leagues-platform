@@ -57,12 +57,13 @@ export default async function AdminLeaguePage({
     );
   }
 
-  const [divisions, sponsors, photos, newsPosts, freeAgents] = await Promise.all([
+  const [divisions, sponsors, photos, newsPosts, freeAgents, teamCount] = await Promise.all([
     getDivisions(league.id),
     prisma.sponsor.findMany({ where: { leagueId: league.id }, orderBy: { createdAt: "asc" } }),
     prisma.photo.findMany({ where: { leagueId: league.id }, orderBy: { createdAt: "desc" } }),
     prisma.newsPost.findMany({ where: { leagueId: league.id }, orderBy: { publishedAt: "desc" } }),
     prisma.freeAgentListing.findMany({ where: { leagueId: league.id }, orderBy: { createdAt: "desc" } }),
+    prisma.team.count({ where: { leagueId: league.id } }),
   ]);
   const updateBranding = updateBrandingAction.bind(null, liga);
   const logout = logoutAction.bind(null, liga);
@@ -89,8 +90,12 @@ export default async function AdminLeaguePage({
           <Field label="Ciudad">
             <input name="city" defaultValue={league.city ?? ""} className="input w-full" />
           </Field>
-          <Field label="URL del logo">
-            <input name="logoUrl" defaultValue={league.logoUrl ?? ""} className="input w-full" placeholder="https://..." />
+          <Field label="Logo">
+            {league.logoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={league.logoUrl} alt="Logo actual" className="mb-2 h-12 object-contain" />
+            )}
+            <input name="logoFile" type="file" accept="image/*" className="input w-full" />
           </Field>
           <div className="flex gap-4">
             <Field label="Color primario">
@@ -106,6 +111,22 @@ export default async function AdminLeaguePage({
             </button>
           </div>
         </form>
+      </section>
+
+      <section className="rounded-xl border border-slate-200 p-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="font-semibold text-slate-800">Equipos</h2>
+            <p className="text-sm text-slate-500">{teamCount} {teamCount === 1 ? "equipo" : "equipos"} cargados</p>
+          </div>
+          <Link
+            href={`/admin/${liga}/equipos`}
+            className="rounded-lg px-4 py-2 text-sm font-semibold text-white"
+            style={{ background: league.primaryColor }}
+          >
+            Gestionar equipos y jugadores →
+          </Link>
+        </div>
       </section>
 
       <section className="space-y-4">
@@ -187,8 +208,8 @@ export default async function AdminLeaguePage({
           <Field label="Nombre">
             <input name="name" required className="input" />
           </Field>
-          <Field label="URL del logo">
-            <input name="logoUrl" required placeholder="https://..." className="input" />
+          <Field label="Logo">
+            <input name="logoFile" type="file" accept="image/*" required className="input" />
           </Field>
           <Field label="Link (opcional)">
             <input name="linkUrl" placeholder="https://..." className="input" />
@@ -215,8 +236,8 @@ export default async function AdminLeaguePage({
           {photos.length === 0 && <p className="text-sm text-slate-500">Sin fotos todavía.</p>}
         </div>
         <form action={createPhoto} className="flex flex-wrap items-end gap-2 border-t border-slate-100 pt-3">
-          <Field label="URL de la foto">
-            <input name="url" required placeholder="https://..." className="input" />
+          <Field label="Foto">
+            <input name="photoFile" type="file" accept="image/*" required className="input" />
           </Field>
           <Field label="Descripción">
             <input name="caption" placeholder="Opcional" className="input" />

@@ -13,7 +13,7 @@ export default async function PlayerGlobalPage({ params }: { params: Promise<{ i
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
       <Link href="/" className="text-sm text-slate-400 hover:underline">
-        ← LigaPro
+        ← Inicio
       </Link>
 
       <div className="mt-4 flex items-center gap-4">
