@@ -25,11 +25,21 @@ ofrecen (su historial vive aislado dentro de cada liga/torneo).
 - **Jugadores y equipos globales**: un jugador puede jugar en varios equipos
   a lo largo del tiempo, incluso en divisiones o ligas distintas, y su perfil
   (`/jugador/[id]`) suma su historial completo automáticamente.
-- **Panel de administración** (`/admin`) por liga, protegido con contraseña:
+- **Panel de administración** (`/admin/<slug-de-tu-liga>`) por liga, protegido
+  con contraseña:
   - Editar marca (nombre, ciudad, logo, colores) con vista previa instantánea.
   - Crear divisiones y torneos (definiendo su sistema y cupo de equipos).
+  - Crear equipos, cargar jugadores nuevos o sumar uno que ya juega en otro
+    equipo de la misma liga (sin perder su historial).
   - Inscribir equipos a un torneo (y asignarlos a un grupo si aplica).
-  - Programar partidos y capturar resultados y goleadores.
+  - Programar partidos y capturar resultados, goleadores y convocatoria.
+  - Logos, escudos y fotos se suben como archivo real (Vercel Blob), no como
+    URL.
+- **Landing de la plataforma** (`/`) con un formulario de "Solicitá tu liga"
+  para clientes nuevos, y un panel privado (`/admin/solicitudes`) para ver
+  esas solicitudes. `/admin` (sin liga) ya no lista las ligas existentes —
+  solo pide el identificador de la que querés administrar, para no exponer
+  qué clientes reales usan la plataforma.
 
 ## Stack
 
@@ -53,6 +63,8 @@ Abre `http://localhost:3000`.
 - Admin de cada liga: `/admin/guadalupe` o `/admin/centenario`, contraseña
   `demo1234` (definida por liga en el modelo `League.adminPassword`; en
   producción debe reemplazarse por autenticación real y contraseñas hasheadas).
+- Solicitudes de nuevos clientes: `/admin/solicitudes`, contraseña
+  `cmdtech2026` (o la que definas en la variable `PLATFORM_ADMIN_PASSWORD`).
 
 ## Despliegue
 

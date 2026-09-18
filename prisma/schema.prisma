@@ -13,6 +13,19 @@ datasource db {
   directUrl = env("DIRECT_DATABASE_URL")
 }
 
+// A lead from the platform's own marketing homepage: someone who wants
+// CMD Tech to set them up with a new league on the platform. Not tied to
+// any League — it comes in before one exists.
+model ContactRequest {
+  id         String   @id @default(cuid())
+  fullName   String
+  leagueName String
+  city       String?
+  contact    String
+  message    String?
+  createdAt  DateTime @default(now())
+}
+
 model League {
   id            String   @id @default(cuid())
   slug          String   @unique
