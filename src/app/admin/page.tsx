@@ -33,6 +33,11 @@ export default async function AdminIndexPage({
         </Link>
         .
       </p>
+      <p className="mt-1 text-xs text-slate-300">
+        <Link href="/admin/solicitudes" className="hover:underline">
+          Panel interno CMD Tech
+        </Link>
+      </p>
     </div>
   );
 }
