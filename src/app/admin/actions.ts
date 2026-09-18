@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { notifyContactRequest } from "@/lib/email";
 
 export async function goToLeagueAdminAction(formData: FormData) {
   const slug = String(formData.get("slug") ?? "")
@@ -28,6 +29,15 @@ export async function createContactRequestAction(formData: FormData) {
   if (!fullName || !leagueName || !contact) return;
 
   await prisma.contactRequest.create({ data: { fullName, leagueName, city, contact, message } });
+
+  // Best-effort: a failed notification email shouldn't block the lead from
+  // being saved — it's still visible in /admin/solicitudes either way.
+  try {
+    await notifyContactRequest({ fullName, leagueName, city, contact, message });
+  } catch (err) {
+    console.error("No se pudo enviar el email de notificación de la solicitud", err);
+  }
+
   redirect("/?solicitud=ok#solicitar");
 }
 
