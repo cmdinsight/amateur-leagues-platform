@@ -194,10 +194,16 @@ export default async function AdminTournamentPage({
                     <input name="awayScore" type="number" min={0} defaultValue={0} className="input w-16 text-center" />
                     <span className="flex-1">{m.awayTeam.name}</span>
                   </div>
+                  <p className="mb-3 text-xs text-slate-500">
+                    Primero marcá quiénes jugaron este partido (convocatoria) y quién fue el arquero de cada
+                    equipo. Después cargá goles y tarjetas solo de quienes jugaron.
+                  </p>
                   <div className="grid gap-4 sm:grid-cols-2 text-sm">
                     <div>
                       <p className="mb-1 text-xs font-semibold uppercase text-slate-400">{m.homeTeam.name}</p>
                       <div className="mb-1 flex justify-end gap-2 text-[10px] text-slate-400">
+                        <span className="w-10 text-center">Jugó</span>
+                        <span className="w-12 text-center">Arquero</span>
                         <span className="w-10 text-center">Goles</span>
                         <span className="w-8 text-center">Am</span>
                         <span className="w-8 text-center">Roj</span>
@@ -205,6 +211,18 @@ export default async function AdminTournamentPage({
                       {m.homeTeam.rosterSpots.map((rs) => (
                         <div key={rs.id} className="flex items-center justify-between gap-2 py-0.5">
                           <span className="flex-1 truncate">{rs.player.fullName}</span>
+                          <input
+                            type="checkbox"
+                            name={`homePlayed_${rs.playerId}`}
+                            className="w-10 text-center"
+                          />
+                          <input
+                            type="radio"
+                            name="homeKeeper"
+                            value={rs.playerId}
+                            defaultChecked={rs.position?.toLowerCase() === "portero"}
+                            className="w-12 text-center"
+                          />
                           <input type="number" min={0} defaultValue={0} name={`homeGoals_${rs.playerId}`} className="input w-10 text-center" />
                           <input type="number" min={0} defaultValue={0} name={`homeYellow_${rs.playerId}`} className="input w-8 text-center" />
                           <input type="number" min={0} defaultValue={0} name={`homeRed_${rs.playerId}`} className="input w-8 text-center" />
@@ -214,6 +232,8 @@ export default async function AdminTournamentPage({
                     <div>
                       <p className="mb-1 text-xs font-semibold uppercase text-slate-400">{m.awayTeam.name}</p>
                       <div className="mb-1 flex justify-end gap-2 text-[10px] text-slate-400">
+                        <span className="w-10 text-center">Jugó</span>
+                        <span className="w-12 text-center">Arquero</span>
                         <span className="w-10 text-center">Goles</span>
                         <span className="w-8 text-center">Am</span>
                         <span className="w-8 text-center">Roj</span>
@@ -221,6 +241,18 @@ export default async function AdminTournamentPage({
                       {m.awayTeam.rosterSpots.map((rs) => (
                         <div key={rs.id} className="flex items-center justify-between gap-2 py-0.5">
                           <span className="flex-1 truncate">{rs.player.fullName}</span>
+                          <input
+                            type="checkbox"
+                            name={`awayPlayed_${rs.playerId}`}
+                            className="w-10 text-center"
+                          />
+                          <input
+                            type="radio"
+                            name="awayKeeper"
+                            value={rs.playerId}
+                            defaultChecked={rs.position?.toLowerCase() === "portero"}
+                            className="w-12 text-center"
+                          />
                           <input type="number" min={0} defaultValue={0} name={`awayGoals_${rs.playerId}`} className="input w-10 text-center" />
                           <input type="number" min={0} defaultValue={0} name={`awayYellow_${rs.playerId}`} className="input w-8 text-center" />
                           <input type="number" min={0} defaultValue={0} name={`awayRed_${rs.playerId}`} className="input w-8 text-center" />

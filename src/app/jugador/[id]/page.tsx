@@ -27,11 +27,18 @@ export default async function PlayerGlobalPage({ params }: { params: Promise<{ i
         </div>
       </div>
 
-      <div className="mt-6 grid grid-cols-3 gap-3">
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatBox label="Partidos jugados" value={profile.matchesPlayed} />
         <StatBox label="Goles totales" value={profile.totalGoals} />
         <StatBox label="Tarjetas amarillas" value={profile.totalYellowCards} />
         <StatBox label="Tarjetas rojas" value={profile.totalRedCards} />
       </div>
+      {profile.matchesAsGoalkeeper > 0 && (
+        <p className="mt-2 text-center text-xs text-slate-400">
+          Jugó como arquero en {profile.matchesAsGoalkeeper}{" "}
+          {profile.matchesAsGoalkeeper === 1 ? "partido" : "partidos"}.
+        </p>
+      )}
 
       <section className="mt-8">
         <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">

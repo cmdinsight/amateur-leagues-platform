@@ -15,6 +15,7 @@ async function main() {
   await prisma.photo.deleteMany();
   await prisma.sponsor.deleteMany();
   await prisma.matchEvent.deleteMany();
+  await prisma.matchAppearance.deleteMany();
   await prisma.match.deleteMany();
   await prisma.teamTournament.deleteMany();
   await prisma.group.deleteMany();
@@ -134,6 +135,23 @@ async function main() {
     for (const p of awayGoals) await prisma.matchEvent.create({ data: { matchId: match.id, playerId: p.id, teamId: away.id, type: MatchEventType.GOAL } });
     for (const c of opts.cards ?? [])
       await prisma.matchEvent.create({ data: { matchId: match.id, playerId: c.player.id, teamId: c.team.id, type: c.type } });
+
+    // The seed doesn't know a real per-match lineup, so assume each team's
+    // full registered roster played, with the roster's "Portero" as keeper —
+    // this backfills MatchAppearance so imbatibles/partidos-jugados work on
+    // demo data too, same as the manual Neon backfill for already-seeded rows.
+    const roster = await prisma.rosterSpot.findMany({ where: { teamId: { in: [home.id, away.id] } } });
+    for (const rs of roster) {
+      await prisma.matchAppearance.create({
+        data: {
+          matchId: match.id,
+          playerId: rs.playerId,
+          teamId: rs.teamId,
+          isGoalkeeper: rs.position?.toLowerCase() === "portero",
+        },
+      });
+    }
+
     return match;
   }
 

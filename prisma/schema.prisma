@@ -147,6 +147,7 @@ model Team {
   homeMatches Match[]          @relation("HomeTeam")
   awayMatches Match[]          @relation("AwayTeam")
   matchEvents MatchEvent[]
+  appearances MatchAppearance[]
 
   @@unique([leagueId, name])
 }
@@ -176,6 +177,7 @@ model Player {
 
   rosterSpots RosterSpot[]
   matchEvents MatchEvent[]
+  appearances MatchAppearance[]
 }
 
 // A player's current team membership (their shirt number etc). A player can
@@ -217,7 +219,8 @@ model Match {
   homeScore    Int?
   awayScore    Int?
 
-  events MatchEvent[]
+  events      MatchEvent[]
+  appearances MatchAppearance[]
 }
 
 enum MatchEventType {
@@ -236,4 +239,22 @@ model MatchEvent {
   team     Team           @relation(fields: [teamId], references: [id], onDelete: Cascade)
   type     MatchEventType
   minute   Int?
+}
+
+// Which players from each team's registered roster actually played a
+// specific match (the "convocatoria"), set by the match's veedor when
+// closing it — before goals/cards are attributed. Also records which one
+// of them played as goalkeeper for that match, making the imbatibles
+// ranking and "partidos jugados" counts exact rather than approximated.
+model MatchAppearance {
+  id           String  @id @default(cuid())
+  matchId      String
+  match        Match   @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  playerId     String
+  player       Player  @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  teamId       String
+  team         Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  isGoalkeeper Boolean @default(false)
+
+  @@unique([matchId, playerId])
 }

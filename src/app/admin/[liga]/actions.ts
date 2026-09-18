@@ -185,6 +185,40 @@ export async function submitResultAction(slug: string, matchId: string, formData
     }
   }
 
+  // Convocatoria: which players from each team's roster actually played this
+  // match, marked by the veedor before capturing goals/cards. A player with
+  // a goal/card recorded is always counted as having played, even if the
+  // "Jugó" checkbox was missed, so stats are never silently lost.
+  const homeKeeperId = String(formData.get("homeKeeper") ?? "").trim() || null;
+  const awayKeeperId = String(formData.get("awayKeeper") ?? "").trim() || null;
+
+  const playedHome = new Set<string>();
+  const playedAway = new Set<string>();
+  for (const [key, value] of formData.entries()) {
+    if (value !== "on") continue;
+    if (key.startsWith("homePlayed_")) playedHome.add(key.replace("homePlayed_", ""));
+    if (key.startsWith("awayPlayed_")) playedAway.add(key.replace("awayPlayed_", ""));
+  }
+  for (const e of events) {
+    if (e.teamId === match.homeTeamId) playedHome.add(e.playerId);
+    else playedAway.add(e.playerId);
+  }
+  if (homeKeeperId) playedHome.add(homeKeeperId);
+  if (awayKeeperId) playedAway.add(awayKeeperId);
+
+  const appearances: { playerId: string; teamId: string; isGoalkeeper: boolean }[] = [
+    ...[...playedHome].map((playerId) => ({
+      playerId,
+      teamId: match.homeTeamId,
+      isGoalkeeper: playerId === homeKeeperId,
+    })),
+    ...[...playedAway].map((playerId) => ({
+      playerId,
+      teamId: match.awayTeamId,
+      isGoalkeeper: playerId === awayKeeperId,
+    })),
+  ];
+
   await prisma.$transaction(async (tx) => {
     await tx.match.update({ where: { id: matchId }, data: { homeScore, awayScore, status: MatchStatus.PLAYED } });
     await tx.matchEvent.deleteMany({
@@ -194,6 +228,10 @@ export async function submitResultAction(slug: string, matchId: string, formData
       for (let i = 0; i < e.count; i++) {
         await tx.matchEvent.create({ data: { matchId, playerId: e.playerId, teamId: e.teamId, type: e.type } });
       }
+    }
+    await tx.matchAppearance.deleteMany({ where: { matchId } });
+    for (const a of appearances) {
+      await tx.matchAppearance.create({ data: { matchId, ...a } });
     }
   });
 

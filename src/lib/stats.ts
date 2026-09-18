@@ -127,54 +127,50 @@ export type GoalkeeperRow = {
   average: number;
 };
 
-// Approximate "imbatibles" ranking: we don't track per-match lineups, so each
-// team's current goalkeeper (roster position "Portero") is credited with the
-// goals their team conceded across every match they played in this scope.
+// Exact "imbatibles" ranking, built from MatchAppearance: the veedor marks
+// who played as goalkeeper in each specific match, so we credit each keeper
+// only with the goals their team conceded in the matches they actually kept.
 export async function getGoalkeeperRanking(
   tournamentId: string,
   groupId?: string,
   limit = 10,
 ): Promise<GoalkeeperRow[]> {
-  const entries = await prisma.teamTournament.findMany({
-    where: { tournamentId, ...(groupId ? { groupId } : {}) },
-    include: {
-      team: {
-        include: { rosterSpots: { where: { position: { contains: "portero", mode: "insensitive" } }, include: { player: true } } },
-      },
+  const appearances = await prisma.matchAppearance.findMany({
+    where: {
+      isGoalkeeper: true,
+      match: { tournamentId, status: MatchStatus.PLAYED, ...(groupId ? { groupId } : {}) },
     },
+    include: { player: true, team: true, match: true },
   });
 
-  const matches = await prisma.match.findMany({
-    where: { tournamentId, status: MatchStatus.PLAYED, ...(groupId ? { groupId } : {}) },
-  });
+  const byPlayer = new Map<string, GoalkeeperRow>();
+  for (const a of appearances) {
+    if (a.match.homeScore == null || a.match.awayScore == null) continue;
+    const isHome = a.match.homeTeamId === a.teamId;
+    const conceded = isHome ? a.match.awayScore : a.match.homeScore;
 
-  const rows: GoalkeeperRow[] = [];
-  for (const entry of entries) {
-    const keeper = entry.team.rosterSpots[0];
-    if (!keeper) continue;
-
-    let matchesPlayed = 0;
-    let goalsConceded = 0;
-    for (const m of matches) {
-      const isHome = m.homeTeamId === entry.teamId;
-      const isAway = m.awayTeamId === entry.teamId;
-      if (!isHome && !isAway) continue;
-      if (m.homeScore == null || m.awayScore == null) continue;
-      matchesPlayed += 1;
-      goalsConceded += isHome ? m.awayScore : m.homeScore;
+    const key = `${a.playerId}-${a.teamId}`;
+    let row = byPlayer.get(key);
+    if (!row) {
+      row = {
+        playerId: a.playerId,
+        fullName: a.player.fullName,
+        teamId: a.teamId,
+        teamName: a.team.name,
+        matchesPlayed: 0,
+        goalsConceded: 0,
+        average: 0,
+      };
+      byPlayer.set(key, row);
     }
-    if (matchesPlayed === 0) continue;
-
-    rows.push({
-      playerId: keeper.playerId,
-      fullName: keeper.player.fullName,
-      teamId: entry.teamId,
-      teamName: entry.team.name,
-      matchesPlayed,
-      goalsConceded,
-      average: Math.round((goalsConceded / matchesPlayed) * 100) / 100,
-    });
+    row.matchesPlayed += 1;
+    row.goalsConceded += conceded;
   }
+
+  const rows = Array.from(byPlayer.values()).map((row) => ({
+    ...row,
+    average: Math.round((row.goalsConceded / row.matchesPlayed) * 100) / 100,
+  }));
 
   return rows.sort((a, b) => a.average - b.average || a.goalsConceded - b.goalsConceded).slice(0, limit);
 }
@@ -314,7 +310,7 @@ export async function getPlayerGlobalProfile(playerId: string) {
   const player = await prisma.player.findUnique({ where: { id: playerId } });
   if (!player) return null;
 
-  const [rosterSpots, events] = await Promise.all([
+  const [rosterSpots, events, appearances] = await Promise.all([
     prisma.rosterSpot.findMany({
       where: { playerId },
       include: { team: { include: { league: true } } },
@@ -326,6 +322,7 @@ export async function getPlayerGlobalProfile(playerId: string) {
         match: { include: { tournament: { include: { division: { include: { league: true } } } } } },
       },
     }),
+    prisma.matchAppearance.findMany({ where: { playerId }, select: { matchId: true, isGoalkeeper: true } }),
   ]);
 
   const goals = events.filter((e) => e.type === MatchEventType.GOAL);
@@ -375,6 +372,8 @@ export async function getPlayerGlobalProfile(playerId: string) {
 
   const matchesInvolved = new Set(events.map((e) => e.matchId));
   const leagueIds = new Set(rosterSpots.map((rs) => rs.team.leagueId));
+  const matchesPlayed = new Set(appearances.map((a) => a.matchId)).size;
+  const matchesAsGoalkeeper = appearances.filter((a) => a.isGoalkeeper).length;
 
   return {
     id: player.id,
@@ -384,6 +383,8 @@ export async function getPlayerGlobalProfile(playerId: string) {
     totalYellowCards: yellows.length,
     totalRedCards: reds.length,
     matchesWithInvolvement: matchesInvolved.size,
+    matchesPlayed,
+    matchesAsGoalkeeper,
     leagueBreakdown: Array.from(breakdown.values()).map((v) => ({
       leagueName: v.leagueName,
       leagueSlug: v.leagueSlug,
