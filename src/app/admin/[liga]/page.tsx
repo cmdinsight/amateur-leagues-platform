@@ -79,11 +79,16 @@ export default async function AdminLeaguePage({
     <div className="mx-auto max-w-3xl px-4 py-8 space-y-10">
       {!league.onboardingSeenAt && <OnboardingTour dismissAction={dismissOnboarding} />}
 
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-slate-900">Panel admin — {league.name}</h1>
-        <form action={logout}>
-          <button className="text-sm text-slate-400 hover:underline">Cerrar sesión</button>
-        </form>
+      <div>
+        <Link href={`/${liga}`} className="text-sm text-slate-400 hover:underline">
+          ← Ver sitio público
+        </Link>
+        <div className="mt-1 flex items-center justify-between">
+          <h1 className="text-xl font-bold text-slate-900">Panel admin — {league.name}</h1>
+          <form action={logout}>
+            <button className="text-sm text-slate-400 hover:underline">Cerrar sesión</button>
+          </form>
+        </div>
       </div>
 
       <section className="rounded-xl border border-slate-200 p-5">

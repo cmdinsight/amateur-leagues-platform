@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getLeagueBySlug, getTournamentById } from "@/lib/leagues";
 import { prisma } from "@/lib/prisma";
@@ -47,7 +48,10 @@ export default async function AdminTournamentPage({
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 space-y-10">
       <div>
-        <p className="text-sm text-slate-400">{tournament.division.name}</p>
+        <Link href={`/admin/${liga}`} className="text-sm text-slate-400 hover:underline">
+          ← Panel admin
+        </Link>
+        <p className="mt-1 text-sm text-slate-400">{tournament.division.name}</p>
         <h1 className="text-xl font-bold text-slate-900">{tournament.name}</h1>
       </div>
 

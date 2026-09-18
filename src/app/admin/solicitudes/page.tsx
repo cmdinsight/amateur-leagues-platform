@@ -21,7 +21,10 @@ export default async function SolicitudesPage({
   if (!authed) {
     return (
       <div className="mx-auto mt-16 max-w-sm px-4">
-        <h1 className="text-xl font-bold text-slate-900">Solicitudes — CMD Tech</h1>
+        <Link href="/" className="text-sm text-slate-400 hover:underline">
+          ← Inicio
+        </Link>
+        <h1 className="mt-2 text-xl font-bold text-slate-900">Solicitudes — CMD Tech</h1>
         <form action={platformLoginAction} className="mt-4 space-y-3">
           <input name="password" type="password" placeholder="Contraseña" className="input w-full" required />
           {error && <p className="text-sm text-red-600">Contraseña incorrecta.</p>}
@@ -38,11 +41,16 @@ export default async function SolicitudesPage({
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 space-y-10">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-slate-900">Panel de CMD Tech</h1>
-        <form action={platformLogoutAction}>
-          <button className="text-sm text-slate-400 hover:underline">Cerrar sesión</button>
-        </form>
+      <div>
+        <Link href="/" className="text-sm text-slate-400 hover:underline">
+          ← Inicio
+        </Link>
+        <div className="mt-1 flex items-center justify-between">
+          <h1 className="text-xl font-bold text-slate-900">Panel de CMD Tech</h1>
+          <form action={platformLogoutAction}>
+            <button className="text-sm text-slate-400 hover:underline">Cerrar sesión</button>
+          </form>
+        </div>
       </div>
 
       {createdLeague && (

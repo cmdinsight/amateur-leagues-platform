@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { getLeagueBySlug } from "@/lib/leagues";
 import { prisma } from "@/lib/prisma";
 import { Crest } from "@/components/Crest";
+import { PLAYER_POSITIONS } from "@/lib/positions";
 import {
   isAdminAuthed,
   createPlayerForTeamAction,
@@ -89,11 +90,17 @@ export default async function AdminEquipoPage({
           </label>
           <label className="block text-sm">
             <span className="mb-1 block font-medium text-slate-600">Número</span>
-            <input name="number" type="number" min={0} className="input w-20" />
+            <input name="number" type="number" min={0} max={99} className="input w-20" />
           </label>
           <label className="block text-sm">
             <span className="mb-1 block font-medium text-slate-600">Posición</span>
-            <input name="position" placeholder="Ej. Portero" className="input" />
+            <select name="position" required className="input">
+              {PLAYER_POSITIONS.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="block text-sm">
             <span className="mb-1 block font-medium text-slate-600">Foto (opcional)</span>
@@ -124,11 +131,17 @@ export default async function AdminEquipoPage({
             </label>
             <label className="block text-sm">
               <span className="mb-1 block font-medium text-slate-600">Número</span>
-              <input name="number" type="number" min={0} className="input w-20" />
+              <input name="number" type="number" min={0} max={99} className="input w-20" />
             </label>
             <label className="block text-sm">
               <span className="mb-1 block font-medium text-slate-600">Posición</span>
-              <input name="position" placeholder="Ej. Defensa" className="input" />
+              <select name="position" required className="input">
+                {PLAYER_POSITIONS.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
             </label>
             <button className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
               Sumar al equipo
