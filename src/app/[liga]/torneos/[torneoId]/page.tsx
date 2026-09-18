@@ -1,11 +1,12 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getLeagueBySlug, getTournamentById } from "@/lib/leagues";
-import { getStandings, getTopScorers, getGoalkeeperRanking, getSanciones } from "@/lib/stats";
+import { getStandings, getTopScorers, getGoalkeeperRanking, getSanciones, getTournamentTotals } from "@/lib/stats";
 import { prisma } from "@/lib/prisma";
 import { StandingsTable } from "@/components/StandingsTable";
 import { ScorersList } from "@/components/ScorersList";
 import { MatchCard } from "@/components/MatchCard";
+import { TotalsRow } from "@/components/TotalsRow";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,7 @@ const TABS = [
   { id: "posiciones", label: "Posiciones" },
   { id: "fixture", label: "Fixture" },
   { id: "lideres", label: "Líderes" },
+  { id: "estadisticas", label: "Estadísticas" },
   { id: "historico", label: "Histórico" },
   { id: "sanciones", label: "Sanciones" },
 ] as const;
@@ -101,6 +103,7 @@ export default async function TournamentPage({
       {tab === "posiciones" && <PosicionesTab tournamentId={tournament.id} groupId={groupId} />}
       {tab === "fixture" && <FixtureTab tournamentId={tournament.id} groupId={groupId} />}
       {tab === "lideres" && <LideresTab liga={liga} tournamentId={tournament.id} groupId={groupId} />}
+      {tab === "estadisticas" && <EstadisticasTab tournamentId={tournament.id} groupId={groupId} />}
       {tab === "historico" && <HistoricoTab tournamentId={tournament.id} groupId={groupId} />}
       {tab === "sanciones" && <SancionesTab tournamentId={tournament.id} groupId={groupId} />}
     </div>
@@ -196,6 +199,31 @@ async function LideresTab({ liga, tournamentId, groupId }: { liga: string; tourn
           </ol>
         )}
       </section>
+    </div>
+  );
+}
+
+async function EstadisticasTab({ tournamentId, groupId }: { tournamentId: string; groupId?: string }) {
+  const totals = await getTournamentTotals(tournamentId, groupId);
+
+  return (
+    <div className="space-y-6">
+      <TotalsRow totals={totals} title="Estadísticas del torneo" />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatBox label="Promedio de goles por partido" value={totals.avgGoalsPerMatch} />
+        <StatBox label="Partidos por jugar" value={totals.totalMatchesScheduled} />
+        <StatBox label="Tarjetas amarillas" value={totals.totalYellowCards} />
+        <StatBox label="Tarjetas rojas" value={totals.totalRedCards} />
+      </div>
+    </div>
+  );
+}
+
+function StatBox({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-xl border border-slate-200 p-4 text-center">
+      <p className="text-2xl font-bold text-slate-900">{value}</p>
+      <p className="text-xs text-slate-500">{label}</p>
     </div>
   );
 }

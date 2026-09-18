@@ -278,6 +278,53 @@ export async function getDivisionTotals(divisionId: string): Promise<LeagueTotal
   return { totalGoals, totalMatchesPlayed, totalTeams: uniqueTeamIds.length, totalPlayers };
 }
 
+export type TournamentTotals = LeagueTotals & {
+  totalMatchesScheduled: number;
+  totalYellowCards: number;
+  totalRedCards: number;
+  avgGoalsPerMatch: number;
+};
+
+export async function getTournamentTotals(tournamentId: string, groupId?: string): Promise<TournamentTotals> {
+  const matchScope = { tournamentId, ...(groupId ? { groupId } : {}) };
+
+  const [totalGoals, totalYellowCards, totalRedCards, totalMatchesPlayed, totalMatchesScheduled, entries] =
+    await Promise.all([
+      prisma.matchEvent.count({ where: { type: MatchEventType.GOAL, match: matchScope } }),
+      prisma.matchEvent.count({ where: { type: MatchEventType.YELLOW_CARD, match: matchScope } }),
+      prisma.matchEvent.count({ where: { type: MatchEventType.RED_CARD, match: matchScope } }),
+      prisma.match.count({ where: { ...matchScope, status: MatchStatus.PLAYED } }),
+      prisma.match.count({ where: { ...matchScope, status: MatchStatus.SCHEDULED } }),
+      prisma.teamTournament.findMany({
+        where: { tournamentId, ...(groupId ? { groupId } : {}) },
+        select: { teamId: true },
+      }),
+    ]);
+
+  const teamIds = entries.map((e) => e.teamId);
+  const totalPlayers =
+    teamIds.length === 0
+      ? 0
+      : (
+          await prisma.rosterSpot.findMany({
+            where: { teamId: { in: teamIds } },
+            select: { playerId: true },
+            distinct: ["playerId"],
+          })
+        ).length;
+
+  return {
+    totalGoals,
+    totalMatchesPlayed,
+    totalMatchesScheduled,
+    totalTeams: teamIds.length,
+    totalPlayers,
+    totalYellowCards,
+    totalRedCards,
+    avgGoalsPerMatch: totalMatchesPlayed === 0 ? 0 : Math.round((totalGoals / totalMatchesPlayed) * 100) / 100,
+  };
+}
+
 export async function getTeamCareer(teamId: string) {
   const matches = await prisma.match.findMany({
     where: { OR: [{ homeTeamId: teamId }, { awayTeamId: teamId }], status: MatchStatus.PLAYED },
