@@ -26,5 +26,5 @@ body {
 }
 
 .input {
-  @apply rounded-lg border border-slate-300 px-3 py-1.5;
+  @apply rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-slate-900 placeholder-slate-400;
 }

@@ -29,18 +29,18 @@ export default async function HomePage({
             historial de cada jugador lo sigue aunque cambie de equipo o de liga.
           </p>
           <div className="mt-8 flex justify-center gap-3">
-            <Link
+            <a
               href="#ligas"
               className="rounded-full bg-emerald-500 px-6 py-3 font-semibold text-slate-900 hover:bg-emerald-400 transition"
             >
               Ver ligas de ejemplo
-            </Link>
-            <Link
+            </a>
+            <a
               href="#solicitar"
               className="rounded-full border border-white/30 px-6 py-3 font-semibold hover:bg-white/10 transition"
             >
               Solicitar mi liga
-            </Link>
+            </a>
           </div>
         </div>
       </section>
@@ -121,17 +121,30 @@ export default async function HomePage({
           <p className="mt-1 text-sm text-slate-300">
             Contanos sobre tu liga o torneo y te contactamos para dejarla lista en la plataforma.
           </p>
+          <p className="mt-3 rounded-lg bg-emerald-500/15 px-4 py-3 text-sm text-emerald-300">
+            ¿Sos cliente de CMD Cobertura Médica Deportiva? El software es gratis para vos.
+          </p>
           {solicitud === "ok" && (
             <p className="mt-4 rounded-lg bg-emerald-500/15 px-4 py-3 text-sm text-emerald-300">
               ¡Listo! Recibimos tu solicitud, te vamos a contactar a la brevedad.
             </p>
           )}
           <form action={createContactRequestAction} className="mt-6 space-y-3">
-            <input name="fullName" required placeholder="Tu nombre" className="input w-full text-slate-900" />
-            <input name="leagueName" required placeholder="Nombre de tu liga o torneo" className="input w-full text-slate-900" />
-            <input name="city" placeholder="Ciudad (opcional)" className="input w-full text-slate-900" />
-            <input name="contact" required placeholder="Email o teléfono" className="input w-full text-slate-900" />
-            <textarea name="message" rows={3} placeholder="Contanos más (opcional)" className="input w-full text-slate-900" />
+            <input name="fullName" required placeholder="Tu nombre" className="input w-full" />
+            <input name="leagueName" required placeholder="Nombre de tu liga o torneo" className="input w-full" />
+            <input name="city" placeholder="Ciudad (opcional)" className="input w-full" />
+            <input name="contact" required placeholder="Email o teléfono" className="input w-full" />
+            <textarea name="message" rows={3} placeholder="Contanos más (opcional)" className="input w-full" />
+            <label className="flex items-start gap-2 text-xs text-slate-300">
+              <input type="checkbox" required className="mt-0.5" />
+              <span>
+                Acepto la{" "}
+                <Link href="/privacidad" className="font-medium underline hover:text-white">
+                  política de privacidad
+                </Link>
+                .
+              </span>
+            </label>
             <button className="w-full rounded-lg bg-emerald-500 py-2 font-semibold text-slate-900 hover:bg-emerald-400 transition">
               Enviar solicitud
             </button>
